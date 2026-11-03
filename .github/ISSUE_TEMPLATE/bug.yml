@@ -1,0 +1,42 @@
+name: Bug report
+description: Report a reproducible problem using synthetic, redacted examples.
+body:
+  - type: markdown
+    attributes:
+      value: Do not include credentials, customer data or vulnerability details. Read SECURITY.md for security reporting guidance.
+  - type: input
+    id: environment
+    attributes:
+      label: Version and environment
+      description: VectorCP release, operating system and browser if relevant.
+    validations:
+      required: true
+  - type: dropdown
+    id: role
+    attributes:
+      label: Affected role
+      options:
+        - Owner
+        - Reseller
+        - Customer
+        - Installation or local development
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Use disposable example accounts and domains.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted evidence
+      description: Optional logs or screenshots with secrets and personal data removed.
