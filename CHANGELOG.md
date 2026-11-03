@@ -22,6 +22,8 @@ No additional completed changes recorded.
   management, background isolation and Escape dismissal.
 - Label dialogs and table regions, focus initial fields, allow long values to
   wrap and keep wide tables within keyboard-accessible scrolling regions.
+- Show visible page-loading status, fetch independent page data in parallel and
+  prevent older navigation responses from replacing newer selections.
 - Add filters for visible websites and accounts, clear empty search results,
   active-plan validation and distinct destructive-action buttons.
 - Limit background job refresh to operation/status pages so file editors are
