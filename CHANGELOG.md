@@ -1,40 +1,75 @@
 # Changelog
 
+User-visible changes are recorded here. Future work belongs in **Unreleased**;
+planned capabilities are tracked in [FEATURES.md](FEATURES.md) and
+[CAPABILITIES.md](CAPABILITIES.md). See [RELEASING.md](RELEASING.md) for tags,
+checksums, versioning and publication rules.
+
+## Unreleased
+
+No additional completed changes recorded.
+
+## 0.4.0 — 3 November 2026 · Development snapshot
+
+### Added
+
+- Original split-V identity, outlined wordmarks and light, dark and monochrome
+  SVG variants; matching panel icons and brand usage guidance.
+- A self-hosted product specification covering personal websites and hosting
+  businesses, with owner, reseller and customer responsibilities.
+- A detailed capability catalog covering customer tools and server operations,
+  with implementation status and acceptance requirements.
+- A documented release process for accurate changelogs, immutable archives,
+  matching tags and checksums.
+
+### Changed
+
+- Use VectorCP throughout current product copy, source, package names, services,
+  cookies, DNS ownership labels and default installation paths.
+- Broaden fresh-host conflict detection to occupied web/control ports and
+  existing control databases.
+- Include brand assets in deterministic source archives.
+
+### Upgrade requirements
+
+- This snapshot introduces a new installation layout. The upgrade helper
+  requires that layout and refuses older installations. A migration from 0.3.x
+  remains pending; do not rename active service/data directories or reinstall
+  over an existing server. See the README and verification notes.
+- This is a development snapshot, not a stable production release. It does not
+  add mail delivery, public authoritative DNS or the other planned services.
+
 ## 0.3.1 — 3 November 2026
 
-- Adopt VectorCP as the public product name, replacing the VeyraPanel working
-  identity in the interface, documentation, service descriptions and releases.
-- Use the shared descriptor “Open-source hosting control” and the line
-  “Your hosting. Your control.” across the sign-in screen and workspace.
-- Retain existing package, service, storage, certificate and verification
-  identifiers for compatibility with development installations.
-- Share the release version between packaging, agent health and the workspace
-  so the displayed release cannot drift from the source archive version.
-- Document the public identity in `BRANDING.md`. Feature coverage is unchanged.
+- Establish the VectorCP public identity in the interface, documentation,
+  service descriptions and source package.
+- Share “Open-source hosting control” and “Your hosting. Your control.” across
+  sign-in and workspace screens.
+- Keep the existing installation layout unchanged in this version.
+- Share the canonical version between packaging, agent health and workspace.
 
 ## 0.3.0 — 3 November 2026
 
-- Add owner-created reseller accounts and reseller-owned customers.
+- Add owner-created resellers and reseller-owned customer accounts.
 - Add immutable customer/reseller packages, explicit assignment, retirement,
-  feature permissions and non-oversold storage/site/customer reservations.
+  feature permissions and non-oversold customer/site/storage reservations.
 - Scope files, sites, database details, jobs, backups and activity to delegated
-  customers. Preserve owner locks and revoke child sessions on a reseller lock.
+  customers. Preserve owner restrictions and revoke child sessions on a parent lock.
 - Add DNS record validation, private authoritative preview, serial tracking,
   zone export and public TXT ownership checks.
 - Add separate owner/reseller/customer sign-in paths.
 - Remove deployment-specific server addresses from application code.
-- Document the open-source product contract, contribution process, architecture
-  and feature gaps. Retain the MIT license.
-
-See `VERIFICATION.md` for release validation; this entry alone does not assert
-that every feature has passed its acceptance checks.
+- Document the product contract, contribution process, architecture and gaps.
 
 ## 0.2.0 — 2 November 2026
 
-Isolated customer storage and processes, PHP 8.3, private MariaDB, WordPress
-installation, customer HTTPS and bounded local files/database backup recovery.
+- Add isolated customer storage and processes, PHP 8.3, private MariaDB,
+  WordPress installation, customer HTTPS and bounded local backup recovery.
 
 ## 0.1.0 — 1 November 2026
 
-Initial owner/customer authentication, static hosting, bounded file editing,
-website suspension, local static exports and scoped activity.
+- Add owner/customer authentication, static hosting, bounded file editing,
+  website suspension, local static exports and scoped activity.
+
+Verification is release-specific. A history entry does not assert that the
+complete product or every acceptance gate is finished.

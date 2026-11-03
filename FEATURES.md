@@ -1,13 +1,16 @@
 # Feature coverage and roadmap
 
-VectorCP is an MIT-licensed open-source alternative to cPanel/WHM. BHPanel's
-documented features define the product target. This is a work tracker, not a
-claim of complete equivalence. No area below is marked as full parity yet.
+VectorCP is a free, MIT-licensed hosting control panel for personal websites
+and hosting businesses. This is an implementation tracker, not a statement
+that the complete product is available. Each area needs a working backend,
+authorization checks, recovery behavior and reproducible acceptance evidence.
 
-The reviewed reference is BHPanel 0.2.94 and its public documentation as inspected
-on 29 October–1 November 2026. Public pages alone cannot reveal every hidden
-workflow; a separate reference instance and versioned fixtures are still needed
-for exact behavioral comparison. BHPanel source code and branding are not bundled.
+The [product specification](PRODUCT.md) defines the roles, installation contract
+and release gates. The [capability catalog](CAPABILITIES.md) breaks the full
+scope into customer, reseller and administrator workflows. Updated 3 November
+2026 after a read-only review of public hosting-tool demonstrations. Demo
+screens reveal controls, but cannot establish undocumented behavior or prove
+that an action works on a real server.
 
 Current target platform: dedicated AlmaLinux 9, x86-64 tested. Other distributions,
 ARM64, a clean-machine full recovery and production capacity remain unverified.
@@ -28,7 +31,7 @@ evidence. Features can move between milestones when dependencies require it.
 
 | Area | Current status | Target behavior | Acceptance target |
 | --- | --- | --- | --- |
-| Installation | Planned; not implemented. | Fresh AlmaLinux 9; x86-64 and ARM64; Light, Full and DNS-only profiles; resumable setup | Install on clean images; interruption and retry; refuse incompatible or conflicting hosts |
+| Installation | Partial: fresh-host preflight and native installation scripts. New layout acceptance and selectable profiles pending. | Fresh AlmaLinux 9; x86-64 and ARM64; Core, Complete and DNS-only profiles; resumable setup | Install on clean images; interruption and retry; refuse incompatible or conflicting hosts |
 | Initial access | Partial: one-time setup and role entry paths; further onboarding remains. | One-time administrator setup; separated administrator/reseller and customer entry points | Setup cannot be claimed without its token; token expires after use; correct role routing |
 | Authentication | Partial: hashed passwords, sessions, CSRF and throttling. MFA/recovery pending. | Password hashing, rate limits, session controls, two-factor authentication and recovery | Session fixation, cross-site request forgery, brute-force and recovery tests |
 | Hierarchy | Partial: owner → reseller → customer. Collaborators/nested tiers pending. | Administrator, reseller, customer and collaborator scopes | Cross-account and cross-reseller requests refused in the backend |
@@ -43,7 +46,7 @@ evidence. Features can move between milestones when dependencies require it.
 | Protocols | Planned; not implemented. | HTTPS, HTTP/2, HTTP/3 and automatic required network configuration | External protocol negotiation tests, including UDP/QUIC |
 | Domains | Partial: owned sites and suspension. Aliases/redirects/dedicated IPs pending. | Sites, aliases, subdomains, redirects, suspension and dedicated IP selection | Ownership validation; no conflicting names; expected virtual-host routing |
 | PHP | Partial: isolated PHP 8.3. Version/extension/settings management pending. | Per-site versions, extensions, settings and per-account workers | Isolation between pools; setting validation; correct version served by each site |
-| Legacy PHP | Planned; not implemented. | Reference compatibility reaches PHP 5.6; signed security maintenance is advertised | Explicit supported-build policy and a demonstrable maintenance source before claiming equivalent support |
+| Older PHP versions | Planned; not implemented. | Optional compatibility runtimes with a documented security-maintenance policy | Explicit supported-build policy and a demonstrable maintenance source before advertising support |
 | Page cache | Planned; not implemented. | Site-level enablement and purge; bypass of private and commerce pages | No personalized response leakage; cache invalidation tests |
 | Object caches | Planned; not implemented. | Account-specific Redis and Memcached | One customer cannot read another customer's cache |
 | Certificates | Partial: IP/customer HTTP-01 TLS and renewal. Aliases/mail certificates pending. | ACME issue and renewal; aliases; forced HTTPS; mail and webmail TLS | Validation failure recovery; real certificate verification and renewal rehearsal |
@@ -86,7 +89,7 @@ evidence. Features can move between milestones when dependencies require it.
 | Remote storage | Planned; not implemented. | Local, SFTP, FTPS, S3-compatible storage and Google Drive | Connection tests, host/certificate verification, outage recovery and discovery after rebuild |
 | Backup formats | Planned; not implemented. | gzip, zstd, uncompressed and encrypted incremental repositories | Restore using only the documented archive/key material on a clean machine |
 | Partial restore | Planned; not implemented. | Account, folder, database, mailbox, DNS, cron and application data | Restore only selected material; unrelated current data remains intact |
-| Migration | Planned; not implemented. | cPanel, CWP, CyberPanel, Webuzo and BHPanel import paths | Versioned fixtures for each supported transport and backup format |
+| Migration | Planned; not implemented. | Documented third-party backup formats, remote account transfers and VectorCP exports | Versioned fixtures for each supported transport and backup format |
 | Bulk migration | Planned; not implemented. | Accounts, plans and reseller hierarchies; preview, conflicts and progress | Source remains unchanged; partial failures can be resumed and reviewed |
 | API access | Planned; not implemented. | Scoped, revocable tokens with expiry and network restrictions | Ownership, permission, expiry, revocation and replay tests |
 | Billing modules | Planned; not implemented. | WHMCS, Blesta and FOSSBilling provisioning and sign-on | Real supported-version contract tests for lifecycle and plan changes |
@@ -98,10 +101,7 @@ evidence. Features can move between milestones when dependencies require it.
 | Updates | Planned; not implemented. | Signed channels, scheduled panel/OS updates, health checks and rollback | Reject bad signatures; simulate failed update; restore working service |
 | Administration | Partial: dashboard, audit and jobs. Broader network/alert/log controls pending. | Network settings, alerts, jobs, logs, audit and initial-setup checks | Real host data; secrets redacted; permissions and failure states correct |
 
-Reference sources: [features](https://www.bhpanel.net/features),
-[plans](https://www.bhpanel.net/docs/plans), [mail](https://www.bhpanel.net/docs/mail),
-[DNS](https://www.bhpanel.net/docs/dns), [backups](https://www.bhpanel.net/docs/backups),
-[migration](https://www.bhpanel.net/docs/migrate), [billing](https://www.bhpanel.net/docs/billing),
-[security](https://www.bhpanel.net/docs/security), [AI](https://www.bhpanel.net/docs/ai).
-The full original audit is retained separately as project research. A new website
-version does not silently redefine a shipped release's acceptance scope.
+The catalog is a product specification. Implementations must use original code
+or appropriately licensed dependencies. A new website version does not silently
+redefine a shipped release's acceptance scope. Third-party integrations remain
+optional and retain their own licenses.

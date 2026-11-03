@@ -1,9 +1,11 @@
 # VectorCP roadmap
 
 VectorCP aims to become a complete open-source hosting control panel for server
-owners, resellers and customers. The current release is **0.3.1**, an early
+owners, resellers and customers. The current release is **0.4.0**, an early
 development milestone. [FEATURES.md](FEATURES.md) is the detailed capability map;
 [VERIFICATION.md](VERIFICATION.md) records what has actually been exercised.
+[PRODUCT.md](PRODUCT.md) defines the self-hosted product contract and
+[CAPABILITIES.md](CAPABILITIES.md) lists the individual workflows.
 
 These are ordered capability gates, not release-date promises. Scope can change
 as implementation and testing uncover dependencies.
@@ -60,8 +62,8 @@ load. Expand platforms only after installation, upgrade and recovery validation.
 AI/MCP integrations remain exploratory until a narrow, authorized model exists.
 
 Complete when feature claims are backed by repeatable acceptance evidence and
-published operational limits. Full competitor parity will be tracked against
-the detailed feature map rather than inferred from interface similarity.
+published operational limits. Product completion is tracked against the detailed capability catalog and
+acceptance evidence. Interface similarity alone is not a completion check.
 
 ## Contribute
 

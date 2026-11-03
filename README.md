@@ -1,11 +1,12 @@
-# VectorCP
+<img src="assets/brand/vectorcp-wordmark.svg" alt="VectorCP" width="340">
 
 **An open-source hosting control panel for server owners, resellers and customers.**
 
-VectorCP is independently written under the MIT license. The product target is
-an alternative to cPanel/WHM with BHPanel's documented feature coverage. Version
-0.3.1 is an early development release. [Feature coverage](FEATURES.md) states the
-remaining work; this release does not provide complete parity.
+VectorCP is free, independently written software under the MIT license. Install
+it on your own server to manage websites, or use it to run a hosting business
+with owner, reseller and customer workspaces. Version 0.4.0 is a development
+release. [Feature coverage](FEATURES.md) states the available tools and limits;
+the [product specification](PRODUCT.md) defines the wider scope being built.
 
 The product has no provider-specific dependency, license server or activation
 fee. A user's VPS is one deployment. Do not embed its credentials or customer
@@ -144,7 +145,7 @@ Install or refresh the optional native service profiles as needed:
 ```sh
 bash deploy/hosting-install.sh --apply
 bash deploy/dns-install.sh --apply
-systemctl restart veyra-agent veyra-web veyra-web-public
+systemctl restart vectorcp-agent vectorcp-web vectorcp-web-public
 ```
 
 The hosting helper installs official AlmaLinux PHP 8.3/MariaDB 10.11 packages
@@ -155,15 +156,15 @@ credentials, sites and sessions. Back up before upgrading. Clean-image recovery,
 unrelated hosting stacks and distribution/version migrations are not tested.
 The helper does not provision a domain, purchase a service or change SSH access.
 
-### Compatibility with development installations
+### Installation layout and upgrades
 
-VectorCP was previously developed under the working name VeyraPanel. Version
-0.3.1 introduces the public name while retaining the existing `veyra` Python
-package, service names, verification-record prefix and `/opt/veyrapanel`,
-`/var/lib/veyrapanel`, `/srv/veyrapanel` and related configuration paths. Current
-installers use these identifiers too. This preserves the upgrade path for
-existing installations; changing them manually can disconnect the panel from
-its accounts, customer services and certificates.
+Version 0.4.0 uses the `vectorcp` Python package, `vectorcp-*` services and
+`/opt/vectorcp`, `/var/lib/vectorcp`, `/srv/vectorcp` and `/etc/vectorcp` paths.
+The upgrade helper requires this layout and refuses other installations.
+Versions 0.3.x and earlier require a separately verified migration; do not rename
+their directories or rerun the initial installer. Keep their existing services
+running until that migration is available. The 0.4.0 layout has local test
+coverage; fresh Linux installation and migration acceptance remain pending.
 
 See [branding](BRANDING.md) for the public name and identity.
 

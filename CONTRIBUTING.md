@@ -1,8 +1,8 @@
 # Contributing to VectorCP
 
 VectorCP is an MIT-licensed, independently written hosting control panel. Its
-product target is a complete open-source alternative to cPanel/WHM with the
-feature coverage documented for BHPanel. The current release is early software;
+product target is a complete, self-hosted control panel for websites and
+hosting businesses, with owner, reseller and customer workspaces. The current release is early software;
 check `FEATURES.md` before starting work or choosing it for hosting customers.
 
 ## Work locally
@@ -38,7 +38,7 @@ as well as the successful path. Accessibility and narrow-screen use matter too.
 
 ## Releases
 
-Set the release version in `veyra/__init__.py`; core imports it. Update
+Set the release version in `vectorcp/__init__.py`; core imports it. Update
 `CHANGELOG.md`, installation instructions and `VERIFICATION.md`. A source archive
 must contain the license, templates, fixed task helpers, renewal hook and timer,
 tests and documentation, while excluding runtime data and secrets. Publish an
