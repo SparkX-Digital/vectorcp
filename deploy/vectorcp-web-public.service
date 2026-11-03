@@ -1,14 +1,14 @@
 [Unit]
 Description=VectorCP HTTPS backend
-After=veyra-agent.service
-Requires=veyra-agent.service
+After=vectorcp-agent.service
+Requires=vectorcp-agent.service
 
 [Service]
 Type=simple
-User=veyra-web
-Group=veyra-web
-WorkingDirectory=/opt/veyrapanel
-ExecStart=/usr/bin/python3 -m veyra.web --port 8008 --origin https://__PANEL_IP__
+User=vectorcp-web
+Group=vectorcp-web
+WorkingDirectory=/opt/vectorcp
+ExecStart=/usr/bin/python3 -m vectorcp.web --port 8008 --origin https://__PANEL_IP__
 Restart=on-failure
 RestartSec=3
 NoNewPrivileges=true

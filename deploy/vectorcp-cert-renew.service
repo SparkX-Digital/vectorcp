@@ -6,7 +6,7 @@ After=network-online.target nginx.service
 [Service]
 Type=oneshot
 User=root
-ExecStart=/opt/veyra-certbot/bin/certbot renew --quiet --cert-name veyra-panel-ip --deploy-hook /usr/local/libexec/veyra-cert-renew
+ExecStart=/opt/vectorcp-certbot/bin/certbot renew --quiet --cert-name vectorcp-panel-ip --deploy-hook /usr/local/libexec/vectorcp-cert-renew
 NoNewPrivileges=true
 PrivateTmp=true
 PrivateDevices=true
@@ -16,6 +16,6 @@ ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
 RestrictSUIDSGID=true
-ReadWritePaths=/etc/letsencrypt /var/lib/letsencrypt /var/log/letsencrypt /srv/veyrapanel/acme /var/log/nginx
+ReadWritePaths=/etc/letsencrypt /var/lib/letsencrypt /var/log/letsencrypt /srv/vectorcp/acme /var/log/nginx
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 

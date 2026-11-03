@@ -79,8 +79,8 @@ def validate(data):
 class DNS:
     def __init__(self, engine):
         self.e = engine
-        self.config = engine.state/'dns-preview' if engine.development else Path('/etc/veyrapanel/dns')
-        self.zones = engine.state/'dns-zones' if engine.development else Path('/var/named/veyrapanel')
+        self.config = engine.state/'dns-preview' if engine.development else Path('/etc/vectorcp/dns')
+        self.zones = engine.state/'dns-zones' if engine.development else Path('/var/named/vectorcp')
         with engine.db() as db:
             db.executescript('''
             CREATE TABLE IF NOT EXISTS dns_zones (
@@ -137,7 +137,7 @@ class DNS:
             if not self.e.development:
                 self.run(['/usr/sbin/named-checkzone', site['domain'], str(target)])
                 self.run(['/usr/sbin/named-checkconf', '-z', str(self.config/'named.conf')])
-                self.run(['/usr/bin/systemctl', 'reload', 'veyra-dns'])
+                self.run(['/usr/bin/systemctl', 'reload', 'vectorcp-dns'])
                 serial = db.execute('SELECT serial FROM dns_zones WHERE site_id=?', (site['id'],)).fetchone()[0]
                 for _ in range(20):
                     answer = self.run(['/usr/bin/dig', '@127.0.0.1', site['domain'], 'SOA', '+short', '+time=1', '+tries=1']).split()
@@ -153,7 +153,7 @@ class DNS:
                 else:
                     self.write(p, content)
             if not self.e.development:
-                subprocess.run(['/usr/bin/systemctl','reload','veyra-dns'], capture_output=True, timeout=15, check=False)
+                subprocess.run(['/usr/bin/systemctl','reload','vectorcp-dns'], capture_output=True, timeout=15, check=False)
             raise
 
     def dispatch(self, db, actor, method, data):
@@ -177,7 +177,7 @@ class DNS:
                 raise Fault('This DNS zone already exists.', 409)
             if db.execute('SELECT COUNT(*) FROM dns_zones').fetchone()[0] >= 256:
                 raise Fault('This server has reached its 256-zone limit.', 409)
-            db.execute('INSERT INTO dns_zones(site_id,serial,challenge,created) VALUES(?,?,?,?)', (site['id'], int(time.time()), 'veyra-'+secrets.token_urlsafe(24), int(time.time())))
+            db.execute('INSERT INTO dns_zones(site_id,serial,challenge,created) VALUES(?,?,?,?)', (site['id'], int(time.time()), 'vectorcp-'+secrets.token_urlsafe(24), int(time.time())))
             db.execute("INSERT INTO dns_records(site_id,name,type,ttl,value) VALUES(?,'@','A',3600,?)", (site['id'],self.e.public_ipv4))
         elif not zone:
             raise Fault('Create this DNS zone first.', 409)
@@ -185,7 +185,7 @@ class DNS:
             if self.e.development:
                 raise Fault('Public ownership checks are unavailable locally.', 409)
             # Ask an independent resolver, never our own un-delegated preview.
-            answer = self.run(['/usr/bin/dig', '@1.1.1.1', '_veyra.'+site['domain'], 'TXT', '+short', '+time=2', '+tries=1'])
+            answer = self.run(['/usr/bin/dig', '@1.1.1.1', '_vectorcp.'+site['domain'], 'TXT', '+short', '+time=2', '+tries=1'])
             valid = any(line.strip() == json.dumps(zone['challenge']) for line in answer.splitlines())
             db.execute('UPDATE dns_zones SET verified=?,checked=? WHERE site_id=?', (int(valid),int(time.time()),site['id']))
             self.e.log(db, actor, 'dns.ownership_checked', site['domain'])

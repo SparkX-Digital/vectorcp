@@ -10,7 +10,7 @@ import secrets
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from veyra.core import Engine
+from vectorcp.core import Engine
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--data", required=True)

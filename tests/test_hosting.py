@@ -4,8 +4,8 @@ import time
 import unittest
 from unittest.mock import patch
 from test_boundaries import BoundaryTests as Fixture
-from veyra.core import Fault
-from veyra.hosting import safe_members
+from vectorcp.core import Fault
+from vectorcp.hosting import safe_members
 
 class HostingBoundaries(unittest.TestCase):
     setUp = Fixture.setUp
@@ -54,7 +54,7 @@ class HostingBoundaries(unittest.TestCase):
     def test_nginx_blocks_php_source_and_upload_execution(self):
         nginx=self.root/'nginx';nginx.mkdir()
         self.engine.nginx=nginx;self.engine.development=False
-        with patch('veyra.core.run_fixed',return_value=''):
+        with patch('vectorcp.core.run_fixed',return_value=''):
             self.engine.publish_config({'id':self.a_site,'user_id':self.alice['user']['id'],'domain':'alice.example.com'},'active')
         config=next(nginx.iterdir()).read_text()
         for required in ('location ~* \\.(php[0-9]*)','^/wp-content/uploads/','^/wp-config','disable_symlinks on'):

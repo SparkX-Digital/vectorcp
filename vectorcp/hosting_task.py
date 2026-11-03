@@ -16,7 +16,7 @@ def main():
     if len(raw) > 16384:
         raise ValueError('Request too large')
     request = json.loads(raw)
-    root = '/srv/veyrapanel/accounts/' + slot
+    root = '/srv/vectorcp/accounts/' + slot
     action = request.get('action')
     if action == 'initialize_database':
         argv = ['/usr/bin/mariadb-install-db', '--no-defaults', '--datadir=' + root + '/private/mysql',
@@ -26,14 +26,14 @@ def main():
         site_id = request.get('site_id')
         if isinstance(site_id, bool) or not isinstance(site_id, int) or not 1 <= site_id <= 2147483647:
             raise ValueError('Invalid website')
-        argv = ['/usr/bin/php', '/opt/veyrapanel/veyra/wp-install.php', root + '/sites/%d/public' % site_id]
+        argv = ['/usr/bin/php', '/opt/vectorcp/vectorcp/wp-install.php', root + '/sites/%d/public' % site_id]
         payload = json.dumps(request.get('input', {})).encode()
     elif action == 'wordpress_https':
         site_id = request.get('site_id')
         domain = request.get('domain', '')
         if not isinstance(site_id, int) or not 1 <= site_id <= 2147483647 or not re.fullmatch(r'[a-z0-9.-]{4,253}', domain):
             raise ValueError('Invalid website')
-        argv = ['/usr/bin/php', '/opt/veyrapanel/veyra/wp-https.php', root + '/sites/%d/public' % site_id, domain]
+        argv = ['/usr/bin/php', '/opt/vectorcp/vectorcp/wp-https.php', root + '/sites/%d/public' % site_id, domain]
         payload = None
     else:
         raise ValueError('Unknown task')

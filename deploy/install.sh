@@ -14,17 +14,27 @@ fi
 [[ $# -le 2 && $(uname -s) == Linux && $EUID == 0 ]] || { echo 'Run as root on Linux.' >&2; exit 1; }
 source /etc/os-release
 [[ ${ID:-} == almalinux && ${VERSION_ID%%.*} == 9 ]] || { echo 'AlmaLinux 9 is required.' >&2; exit 1; }
-for location in /usr/local/cpanel /usr/local/directadmin /usr/local/CyberCP /usr/local/lsws /www/server/panel /opt/bhpanel /usr/local/bhpanel /opt/veyrapanel; do
+[[ $(uname -m) == x86_64 ]] || { echo 'This development installer targets x86-64. Other architectures are not yet verified.' >&2; exit 1; }
+for location in /opt/vectorcp /var/lib/vectorcp /srv/vectorcp /etc/vectorcp; do
   [[ ! -e $location ]] || { echo "Existing application at $location. A fresh host is required." >&2; exit 1; }
 done
+# Detect existing hosting services without assuming a particular panel vendor.
+if ss -H -lnt | awk '{print $4}' | grep -Eq ':(80|443|2082|2083|2086|2087|2222|8080|8090|8443)$'; then
+  echo 'A web or hosting-control port is already in use. A fresh host is required.' >&2
+  exit 1
+fi
+if compgen -G '/var/lib/*/control.sqlite3' >/dev/null; then
+  echo 'An existing control database was found. Use its verified upgrade procedure.' >&2
+  exit 1
+fi
 for package in nginx httpd mariadb-server postfix dovecot; do
   if rpm -q "$package" >/dev/null 2>&1; then
     echo "Existing hosting component $package detected. Review before installation." >&2
     exit 1
   fi
 done
-if id veyra-web >/dev/null 2>&1; then
-  echo 'The veyra-web account already exists. Review before installation.' >&2
+if id vectorcp-web >/dev/null 2>&1; then
+  echo 'The vectorcp-web account already exists. Review before installation.' >&2
   exit 1
 fi
 echo "Preflight: $PRETTY_NAME, $(uname -m)"
@@ -37,29 +47,29 @@ if [[ $mode == --check ]]; then
 fi
 project_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 dnf -y install python3 nginx policycoreutils-python-utils curl tar
-useradd --system --user-group --home-dir /nonexistent --no-create-home --shell /sbin/nologin veyra-web
-install -d -m 0755 /opt/veyrapanel /srv/veyrapanel/sites
-install -d -m 0700 /var/lib/veyrapanel /var/lib/veyrapanel/install-backups
-tar --exclude='__pycache__' --exclude='*.pyc' -C "$project_dir" -cf - veyra | tar -C /opt/veyrapanel -xf -
-chown -R root:root /opt/veyrapanel /srv/veyrapanel /var/lib/veyrapanel
-find /opt/veyrapanel -type d -exec chmod 0755 {} +
-find /opt/veyrapanel -type f -exec chmod 0644 {} +
-chmod 0755 /srv/veyrapanel /srv/veyrapanel/sites
-cp -a /etc/nginx/nginx.conf /var/lib/veyrapanel/install-backups/nginx.conf
+useradd --system --user-group --home-dir /nonexistent --no-create-home --shell /sbin/nologin vectorcp-web
+install -d -m 0755 /opt/vectorcp /srv/vectorcp/sites
+install -d -m 0700 /var/lib/vectorcp /var/lib/vectorcp/install-backups
+tar --exclude='__pycache__' --exclude='*.pyc' -C "$project_dir" -cf - vectorcp | tar -C /opt/vectorcp -xf -
+chown -R root:root /opt/vectorcp /srv/vectorcp /var/lib/vectorcp
+find /opt/vectorcp -type d -exec chmod 0755 {} +
+find /opt/vectorcp -type f -exec chmod 0644 {} +
+chmod 0755 /srv/vectorcp /srv/vectorcp/sites
+cp -a /etc/nginx/nginx.conf /var/lib/vectorcp/install-backups/nginx.conf
 install -m 0644 "$project_dir/deploy/nginx.conf" /etc/nginx/nginx.conf
 if [[ $(getenforce) != Disabled ]]; then
-  semanage fcontext -a -t httpd_sys_content_t '/srv/veyrapanel(/.*)?' || semanage fcontext -m -t httpd_sys_content_t '/srv/veyrapanel(/.*)?'
-  restorecon -RF /srv/veyrapanel
+  semanage fcontext -a -t httpd_sys_content_t '/srv/vectorcp(/.*)?' || semanage fcontext -m -t httpd_sys_content_t '/srv/vectorcp(/.*)?'
+  restorecon -RF /srv/vectorcp
 fi
 if ! /usr/sbin/nginx -t; then
-  cp -a /var/lib/veyrapanel/install-backups/nginx.conf /etc/nginx/nginx.conf
+  cp -a /var/lib/vectorcp/install-backups/nginx.conf /etc/nginx/nginx.conf
   echo 'Nginx validation failed. Its previous configuration was restored.' >&2
   exit 1
 fi
-install -m 0644 "$project_dir/deploy/veyra-agent.service" /etc/systemd/system/veyra-agent.service
-install -m 0644 "$project_dir/deploy/veyra-web.service" /etc/systemd/system/veyra-web.service
+install -m 0644 "$project_dir/deploy/vectorcp-agent.service" /etc/systemd/system/vectorcp-agent.service
+install -m 0644 "$project_dir/deploy/vectorcp-web.service" /etc/systemd/system/vectorcp-web.service
 systemctl daemon-reload
-systemctl enable --now nginx veyra-agent veyra-web
+systemctl enable --now nginx vectorcp-agent vectorcp-web
 if [[ $open_http == --open-http ]] && command -v firewall-cmd >/dev/null && firewall-cmd --state >/dev/null 2>&1; then
   firewall-cmd --permanent --add-service=http
   firewall-cmd --reload
@@ -76,6 +86,6 @@ done
 echo
 echo 'Services started. The panel is loopback-only, with no public administrative port.'
 echo 'Create a 30-minute administrator setup token with:'
-echo '  cd /opt/veyrapanel && python3 -m veyra.agent --setup-token'
+echo '  cd /opt/vectorcp && python3 -m vectorcp.agent --setup-token'
 echo 'Then connect through an SSH tunnel and open the token through the setup form.'
-echo 'This first release is not a complete BHPanel equivalent. Review README.md.'
+echo 'Review README.md for the development release scope and installation limits.'

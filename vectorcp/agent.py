@@ -90,11 +90,11 @@ def rpc(path, request):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--state", default="/var/lib/veyrapanel")
-    parser.add_argument("--sites", default="/srv/veyrapanel/sites")
-    parser.add_argument("--socket", default="/run/veyrapanel/agent.sock")
+    parser.add_argument("--state", default="/var/lib/vectorcp")
+    parser.add_argument("--sites", default="/srv/vectorcp/sites")
+    parser.add_argument("--socket", default="/run/vectorcp/agent.sock")
     parser.add_argument("--nginx", default="/etc/nginx/conf.d")
-    parser.add_argument("--web-user", default="veyra-web")
+    parser.add_argument("--web-user", default="vectorcp-web")
     parser.add_argument("--development", action="store_true")
     parser.add_argument("--setup-token", action="store_true")
     args = parser.parse_args()

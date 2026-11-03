@@ -257,7 +257,7 @@ class Engine:
         if not isinstance(method, str) or not isinstance(data, dict):
             raise Fault("Invalid request.")
         if method == "health":
-            return {"service": "veyra-agent", "ok": True, "version": VERSION}
+            return {"service": "vectorcp-agent", "ok": True, "version": VERSION}
         if method == "login":
             return self.login(data)
         if method == "bootstrap":
@@ -390,7 +390,7 @@ class Engine:
             raise Fault("This account has reached its website limit.", 409)
         welcome = ("<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
                    "<title>Welcome</title><style>body{font:18px system-ui;padding:12vh 10%;color:#183536;background:#f4f7f5}"
-                   "h1{font-size:48px;letter-spacing:-2px}</style><p>VEYRA PANEL</p><h1>Your website is ready.</h1>"
+                   "h1{font-size:48px;letter-spacing:-2px}</style><p>VECTORCP</p><h1>Your website is ready.</h1>"
                    "<p>Edit index.html in your file manager to make it yours.</p></html>").encode()
         if self.account_usage(db, owner_id) + len(welcome) > owner["storage_mb"] * 1024 * 1024:
             raise Fault("This account has reached its file storage limit.", 409)
@@ -426,14 +426,14 @@ class Engine:
             return
         if not self.nginx:
             raise Fault('Nginx integration is not configured.', 503)
-        path = self.nginx / ('veyra-site-%d.conf' % site['id'])
+        path = self.nginx / ('vectorcp-site-%d.conf' % site['id'])
         root = str(self.site_root(site))
         if not re.fullmatch(r'/[a-zA-Z0-9_/-]+', root) or not DOMAIN.fullmatch(site['domain']):
             raise Fault('Unsafe website configuration.', 503)
         site = dict(site)
         runtime = site.get('runtime', 'static')
         php = runtime in ('php', 'wordpress')
-        challenge = 'location ^~ /.well-known/acme-challenge/ { root /srv/veyrapanel/acme; default_type text/plain; }\n'
+        challenge = 'location ^~ /.well-known/acme-challenge/ { root /srv/vectorcp/acme; default_type text/plain; }\n'
         common = ('root %s;\nindex index.php index.html;\nautoindex off;\ndisable_symlinks on from=$document_root;\n'
                   'client_max_body_size 10m;\nadd_header X-Content-Type-Options nosniff always;\n'
                   'location ~ /\\. { deny all; }\n'
@@ -450,7 +450,7 @@ class Engine:
                        'location ~ \\.php$ { try_files $uri =404; include /etc/nginx/fastcgi_params; '
                        'fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name; '
                        'fastcgi_param HTTP_PROXY ""; fastcgi_param HTTPS $https if_not_empty; '
-                       'fastcgi_pass unix:/run/veyra-hosting/%s/php.sock; fastcgi_read_timeout 70s; }\n') % slot
+                       'fastcgi_pass unix:/run/vectorcp-hosting/%s/php.sock; fastcgi_read_timeout 70s; }\n') % slot
         else:
             serving = 'location / { try_files $uri $uri/ =404; }\nlocation ~ \\.php$ { return 403; }\n'
         serving += 'location ~* \\.(php[0-9]*)(/|$) { return 403; }\n'
@@ -459,8 +459,8 @@ class Engine:
         content = 'server {\nlisten 80;\nserver_name %s;\n%s' % (site['domain'], challenge)
         if tls:
             content += 'location / { return 308 https://%s$request_uri; }\n}\n' % site['domain']
-            content += ('server {\nlisten 443 ssl;\nserver_name %s;\nssl_certificate /etc/letsencrypt/live/veyra-site-%d/fullchain.pem;\n'
-                        'ssl_certificate_key /etc/letsencrypt/live/veyra-site-%d/privkey.pem;\nssl_protocols TLSv1.2 TLSv1.3;\nssl_session_tickets off;\n') % (site['domain'], site['id'], site['id'])
+            content += ('server {\nlisten 443 ssl;\nserver_name %s;\nssl_certificate /etc/letsencrypt/live/vectorcp-site-%d/fullchain.pem;\n'
+                        'ssl_certificate_key /etc/letsencrypt/live/vectorcp-site-%d/privkey.pem;\nssl_protocols TLSv1.2 TLSv1.3;\nssl_session_tickets off;\n') % (site['domain'], site['id'], site['id'])
             content += common + serving + '}\n'
         else:
             content += common + serving + '}\n'
@@ -581,7 +581,7 @@ class Engine:
                 owner = db.execute("SELECT storage_mb FROM users WHERE id=?", (site["user_id"],)).fetchone()
                 if self.account_usage(db, site["user_id"]) - old_size + len(encoded) > owner["storage_mb"] * 1024 * 1024:
                     raise Fault("This account has reached its file storage limit.", 409)
-                temporary = ".veyra-" + secrets.token_hex(12)
+                temporary = ".vectorcp-" + secrets.token_hex(12)
                 try:
                     write_fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644, dir_fd=fd)
                     with os.fdopen(write_fd, "wb") as stream:
@@ -821,7 +821,7 @@ class Engine:
         uptime = float(Path("/proc/uptime").read_text().split()[0]) if Path("/proc/uptime").exists() else None
         services = []
         if not self.development:
-            for name in ("nginx", "veyra-agent", "veyra-web", "sshd"):
+            for name in ("nginx", "vectorcp-agent", "vectorcp-web", "sshd"):
                 r = subprocess.run(["/usr/bin/systemctl", "is-active", name], capture_output=True, text=True, timeout=5, check=False)
                 services.append({"name": name, "status": r.stdout.strip() or "unknown"})
         return {"public_ipv4": self.public_ipv4, "hosting_enabled": self.hosting.enabled, "user": self.public_user(actor), "csrf": actor["csrf"], "version": VERSION,

@@ -14,7 +14,8 @@ from .core import Fault
 
 STATIC = Path(__file__).with_name("static")
 ROUTES = {"/admin": ("index.html", "text/html; charset=utf-8"), "/reseller": ("index.html", "text/html; charset=utf-8"), "/customer": ("index.html", "text/html; charset=utf-8"), "/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"),
-          "/style.css": ("style.css", "text/css; charset=utf-8"), "/favicon.svg": ("favicon.svg", "image/svg+xml")}
+          "/style.css": ("style.css", "text/css; charset=utf-8"), "/favicon.svg": ("favicon.svg", "image/svg+xml"),
+          "/brand.svg": ("brand.svg", "image/svg+xml"), "/brand-light.svg": ("brand-light.svg", "image/svg+xml")}
 OPERATIONS = {"overview", "accounts.list", "accounts.create", "accounts.active", "sites.list", "sites.create", "sites.active",
               "files.list", "files.read", "files.write", "files.mkdir", "backups.list", "backups.create", "backups.download", "audit", "logout", "bootstrap", "login", "hosting.enable", "hosting.php", "hosting.wordpress", "hosting.tls", "databases.create", "databases.list", "databases.credentials", "jobs.list", "backups.full", "backups.restore", "backups.delete", "backups.describe", "backups.chunk", "plans.list", "plans.create", "plans.active", "plans.assign", "dns.list", "dns.create", "dns.save", "dns.delete", "dns.export", "dns.verify"}
 
@@ -58,9 +59,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/healthz":
             try:
                 rpc(self.server.agent_socket, {"method": "health"})
-                self.respond(200, {"service": "veyra-web", "ok": True, "agent": "ready"})
+                self.respond(200, {"service": "vectorcp-web", "ok": True, "agent": "ready"})
             except (Fault, OSError, ValueError):
-                self.respond(503, {"service": "veyra-web", "ok": False, "agent": "unavailable"})
+                self.respond(503, {"service": "vectorcp-web", "ok": False, "agent": "unavailable"})
             return
         if path not in ROUTES:
             self.respond(404, {"error": "Page not found."})
@@ -91,7 +92,7 @@ class Handler(BaseHTTPRequestHandler):
                     raise Fault("Too many sign-in requests. Wait a minute and try again.", 429)
             cookies = SimpleCookie()
             cookies.load(self.headers.get("Cookie", ""))
-            token = cookies["veyra_session"].value if "veyra_session" in cookies else ""
+            token = cookies["vectorcp_session"].value if "vectorcp_session" in cookies else ""
             # Ignore role, user ID, token and CSRF claims in the request envelope.
             if payload['method'] == 'backups.download':
                 self.download_backup(payload.get('data', {}), token)
@@ -101,9 +102,9 @@ class Handler(BaseHTTPRequestHandler):
             set_cookie = None
             flags = "; HttpOnly; SameSite=Strict; Path=/" + ("; Secure" if self.server.origin.startswith("https://") else "")
             if payload["method"] in ("bootstrap", "login"):
-                set_cookie = "veyra_session=" + result.pop("token") + "; Max-Age=28800" + flags
+                set_cookie = "vectorcp_session=" + result.pop("token") + "; Max-Age=28800" + flags
             elif payload["method"] == "logout":
-                set_cookie = "veyra_session=; Max-Age=0" + flags
+                set_cookie = "vectorcp_session=; Max-Age=0" + flags
             if payload['method'] == 'backups.download':
                 self.respond(200, base64.b64decode(result['base64']), 'application/gzip', filename=result['filename'])
             else:
@@ -175,7 +176,7 @@ class Server(ThreadingHTTPServer):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--socket", default="/run/veyrapanel/agent.sock")
+    parser.add_argument("--socket", default="/run/vectorcp/agent.sock")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--origin", required=True)
     parser.add_argument("--development", action="store_true")

@@ -14,8 +14,8 @@ import sys
 import time
 
 SOURCE = Path(__file__).resolve().parents[1]
-INSTALL = Path('/opt/veyrapanel')
-STATE = Path('/var/lib/veyrapanel')
+INSTALL = Path('/opt/vectorcp')
+STATE = Path('/var/lib/vectorcp')
 
 
 def run(args):
@@ -27,19 +27,19 @@ def main():
     p.add_argument('--apply', action='store_true')
     p.add_argument('--check', action='store_true')
     args = p.parse_args()
-    if os.geteuid() != 0 or sys.platform != 'linux' or not (INSTALL/'veyra').is_dir() or not (STATE/'control.sqlite3').is_file():
+    if os.geteuid() != 0 or sys.platform != 'linux' or not (INSTALL/'vectorcp').is_dir() or not (STATE/'control.sqlite3').is_file():
         raise SystemExit('Run as root on an existing VectorCP Linux installation.')
-    if (SOURCE/'veyra').resolve() == (INSTALL/'veyra').resolve():
+    if (SOURCE/'vectorcp').resolve() == (INSTALL/'vectorcp').resolve():
         raise SystemExit('Extract the reviewed release separately from the active installation.')
     for filename in ('core.py','agent.py','web.py','distribution.py','hosting.py','hosting_task.py','dns.py'):
-        path = SOURCE/'veyra'/filename
+        path = SOURCE/'vectorcp'/filename
         compile(path.read_text(),str(path),'exec')
     with sqlite3.connect(str(STATE/'control.sqlite3')) as db:
         if db.execute("SELECT 1 FROM jobs WHERE status IN ('queued','running')").fetchone():
             raise SystemExit('A hosting job is running. Retry after it finishes.')
-    units = ['veyra-agent','veyra-web']
-    if Path('/etc/systemd/system/veyra-web-public.service').is_file():
-        units.append('veyra-web-public')
+    units = ['vectorcp-agent','vectorcp-web']
+    if Path('/etc/systemd/system/vectorcp-web-public.service').is_file():
+        units.append('vectorcp-web-public')
     print('Preflight passed. The upgrade preserves customer sites and the control database.')
     if not args.apply:
         print('Check only: no changes made. Use --apply to back up and upgrade the panel.')
@@ -49,7 +49,7 @@ def main():
     backup.mkdir(mode=0o700)
     incoming = INSTALL/('.incoming-'+stamp)
     previous = INSTALL/('.previous-'+stamp)
-    shutil.copytree(SOURCE/'veyra',incoming,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
+    shutil.copytree(SOURCE/'vectorcp',incoming,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
     for folder, dirs, files in os.walk(incoming):
         os.chmod(folder,0o755)
         for name in files:
@@ -57,23 +57,23 @@ def main():
             if path.is_symlink():
                 raise SystemExit('Release source must not contain symlinks.')
             os.chmod(path,0o644)
-    shutil.copytree(INSTALL/'veyra',backup/'veyra',ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
+    shutil.copytree(INSTALL/'vectorcp',backup/'vectorcp',ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
     # Stop frontend first, then agent: no requests can race the migration.
     run(['/usr/bin/systemctl','stop']+list(reversed(units[1:])))
     with sqlite3.connect(str(STATE/'control.sqlite3')) as db:
         if db.execute("SELECT 1 FROM jobs WHERE status IN ('queued','running')").fetchone():
             run(['/usr/bin/systemctl','start']+units)
             raise SystemExit('A job started after preflight. No application change was made.')
-        run(['/usr/bin/systemctl','stop','veyra-agent'])
+        run(['/usr/bin/systemctl','stop','vectorcp-agent'])
         with sqlite3.connect(str(backup/'control.sqlite3')) as target:
             db.backup(target)
     os.chmod(backup/'control.sqlite3',0o600)
-    (INSTALL/'veyra').rename(previous)
-    incoming.rename(INSTALL/'veyra')
+    (INSTALL/'vectorcp').rename(previous)
+    incoming.rename(INSTALL/'vectorcp')
     try:
         run(['/usr/bin/systemctl','daemon-reload'])
-        run(['/usr/bin/systemctl','start','veyra-agent'])
-        health = "from veyra.agent import rpc; import json; print(json.dumps(rpc('/run/veyrapanel/agent.sock', {'method':'health'})))"
+        run(['/usr/bin/systemctl','start','vectorcp-agent'])
+        health = "from vectorcp.agent import rpc; import json; print(json.dumps(rpc('/run/vectorcp/agent.sock', {'method':'health'})))"
         ready=False
         for attempt in range(30):
             result=subprocess.run(['/usr/bin/python3','-c',health],cwd=str(INSTALL),capture_output=True,text=True,timeout=5)
@@ -88,8 +88,8 @@ def main():
         # Migrations are additive. Keep the current DB and its complete backup;
         # never overwrite live changes with an old database automatically.
         run(['/usr/bin/systemctl','stop']+list(reversed(units)))
-        (INSTALL/'veyra').rename(INSTALL/('.failed-'+stamp))
-        previous.rename(INSTALL/'veyra')
+        (INSTALL/'vectorcp').rename(INSTALL/('.failed-'+stamp))
+        previous.rename(INSTALL/'vectorcp')
         run(['/usr/bin/systemctl','start']+units)
         raise SystemExit('Upgrade failed. Previous application restored; database backup retained at '+str(backup))
     print('Upgrade complete. Backups retained at '+str(backup))

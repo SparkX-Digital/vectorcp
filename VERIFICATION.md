@@ -1,9 +1,43 @@
+# VectorCP 0.4.0 development snapshot verification
+
+The current source uses the VectorCP package, service and storage identifiers.
+This changes the installation layout; the upgrade helper refuses installations
+that do not have that layout. A verified migration from 0.3.x is not included.
+Do not use the fresh installer on an existing hosting server.
+
+All 56 tests passed locally on Python 3.13 in 47.014 seconds after the namespace
+change and wordmark-route update. JavaScript and all four deployment shell
+scripts passed syntax checks.
+They cover authorization, tenant boundaries, HTTP, jobs, plans, backups and DNS.
+The original logo was inspected in the actual local application's sign-in screen
+and the generated public website. The new wordmark routes are included in the
+HTTP asset and security-header checks. Source packaging includes the SVG assets.
+
+Fresh AlmaLinux installation, renamed service units, certificate paths, customer
+volume mounts, restart recovery and upgrades have not yet been accepted under
+the 0.4.0 layout. Earlier live checks below prove the earlier layout only. Local
+tests must not be presented as proof that the new Linux deployment works.
+The existing integration server has not been migrated by this publication.
+
+Read-only product research on 3 November 2026 inventoried the public customer
+and administrator tools and representative account, mail, database, DNS, backup
+and scheduled-job interfaces. Some demo actions are disabled or pages omitted;
+research is not a behavioral test or a completeness certification. The original
+222-workflow catalog is a target specification with explicit statuses.
+
+The changelog preserves the dates and behavior of earlier versions. The release
+process requires matching source, tags and checksums; this development snapshot
+is not a stable release and does not claim signed updates or an independent audit.
+
+## Earlier release evidence
+
+The following evidence remains scoped to its original version and deployment.
+
 # VectorCP 0.3.1 branding verification
 
 The 0.3.1 change adopts the selected public name in the interface, documentation,
 HTTP server identity and source packaging. Customer-hosting behavior and runtime
-identifiers are retained. Earlier verification evidence below remains labeled
-with the name and release under which it was performed.
+identifiers are retained. Earlier verification evidence below retains its original release scope.
 
 Final local validation on Python 3.13: all 56 existing tests passed in 42.684 seconds.
 The JavaScript syntax check and all four deployment-script syntax checks passed.
@@ -30,10 +64,10 @@ runtime data and private deployment files, and uses the VectorCP release prefix.
 A public repository and project domain have not been launched as part of this
 branding change. This release does not add to the 0.3.0 feature coverage.
 
-# VeyraPanel 0.3 verification
+# 0.3 verification
 
 Verified on 2–3 November 2026. This is an open-source product milestone, not
-complete BHPanel parity or production acceptance. The 0.2 evidence follows.
+complete product scope or production acceptance. The 0.2 evidence follows.
 
 ## Automated and deployment checks
 
@@ -113,10 +147,10 @@ reference-product workflow comparison is claimed.
 
 ---
 
-# VeyraPanel 0.2 verification
+# VectorCP 0.2 verification
 
 Verified on 2 November 2026. This report describes the milestone actually built;
-it does not establish complete BHPanel feature parity or production acceptance.
+it does not establish complete product acceptance or production readiness.
 
 ## Automated checks
 
@@ -188,7 +222,7 @@ customer certificates as well. A staging dry run of all three current certificat
 The two disposable verification customers and their sites were removed from active
 hosting after explicit user approval. Their volumes, configuration, unused test
 certificate and a complete panel database snapshot are retained in the private
-`/var/lib/veyrapanel/install-backups/hosting-qa-20261102/` recovery archive.
+`/var/lib/vectorcp/install-backups/hosting-qa-20261102/` recovery archive.
 The owner and working WordPress demo were excluded. Audit history remains.
 
 ## Limits and further work

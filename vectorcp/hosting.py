@@ -32,7 +32,7 @@ def command(argv, input=None, timeout=90):
     result = subprocess.run(argv, input=input, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
     if result.returncode:
         with contextlib.suppress(OSError):
-            log = Path('/var/lib/veyrapanel/hosting/last-error.log')
+            log = Path('/var/lib/vectorcp/hosting/last-error.log')
             diagnostic = (result.stderr + result.stdout)[-6000:].decode('utf-8', 'replace')
             diagnostic = re.sub(r'[A-Za-z0-9_-]{24,}', '[redacted]', diagnostic)
             log.write_text(diagnostic)
@@ -74,8 +74,8 @@ class Hosting:
     def __init__(self, engine):
         self.engine = engine
         self.enabled = not engine.development and (engine.state / 'hosting/enabled').exists()
-        self.base = Path('/srv/veyrapanel/accounts')
-        self.config = Path('/etc/veyrapanel/hosting')
+        self.base = Path('/srv/vectorcp/accounts')
+        self.config = Path('/etc/vectorcp/hosting')
         self.worker_lock = threading.Lock()
 
     def slot(self, owner):
@@ -90,7 +90,7 @@ class Hosting:
         return self.base / slot
 
     def identity(self, slot):
-        return pwd.getpwnam('veyra-c' + slot)
+        return pwd.getpwnam('vectorcp-c' + slot)
 
     def mounted(self, slot):
         root = self.root(slot)
@@ -102,7 +102,7 @@ class Hosting:
         root = self.mounted(slot)
         if argv[0] == '/usr/bin/mariadb-install-db':
             request = {'action': 'initialize_database'}
-        elif argv[:2] == ['/usr/bin/php', '/opt/veyrapanel/veyra/wp-install.php']:
+        elif argv[:2] == ['/usr/bin/php', '/opt/vectorcp/vectorcp/wp-install.php']:
             site_id = int(Path(argv[2]).parent.name)
             request = {'action': 'install_wordpress', 'site_id': site_id, 'input': json.loads(input)}
         else:
@@ -111,10 +111,10 @@ class Hosting:
 
     def task(self, slot, request, timeout=150):
         self.mounted(slot)
-        command(['/usr/bin/systemctl', 'start', 'veyra-task' + slot + '.socket'])
+        command(['/usr/bin/systemctl', 'start', 'vectorcp-task' + slot + '.socket'])
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
             client.settimeout(timeout + 30)
-            client.connect('/run/veyra-hosting-tasks/' + slot + '.sock')
+            client.connect('/run/vectorcp-hosting-tasks/' + slot + '.sock')
             client.sendall(json.dumps(request).encode() + b'\n')
             with client.makefile('rb') as stream:
                 raw = stream.readline(8193)
@@ -142,7 +142,7 @@ class Hosting:
                 stream.truncate(size * 1024 ** 2)
             image.chmod(0o600)
             command(['/usr/sbin/mkfs.ext4', '-q', '-F', '-m', '0', str(image)])
-            command(['/usr/bin/systemctl', 'start', 'srv-veyrapanel-accounts-' + slot + '.mount'])
+            command(['/usr/bin/systemctl', 'start', 'srv-vectorcp-accounts-' + slot + '.mount'])
             root = self.mounted(slot)
             ident = self.identity(slot)
             os.chown(root, 0, ident.pw_gid)
@@ -165,7 +165,7 @@ class Hosting:
 error_log = %s/private/php-error.log
 daemonize = no
 [customer]
-listen = /run/veyra-hosting/%s/php.sock
+listen = /run/vectorcp-hosting/%s/php.sock
 listen.mode = 0660
 pm = ondemand
 pm.max_children = 2
@@ -207,9 +207,9 @@ php_admin_value[disable_functions] = exec,passthru,shell_exec,system,proc_open,p
 
     def start_php(self, slot):
         self.mounted(slot)
-        command(['/usr/bin/systemctl', 'start', 'veyra-php@' + slot])
+        command(['/usr/bin/systemctl', 'start', 'vectorcp-php@' + slot])
         for _ in range(40):
-            path = '/run/veyra-hosting/' + slot + '/php.sock'
+            path = '/run/vectorcp-hosting/' + slot + '/php.sock'
             try:
                 with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as probe:
                     probe.settimeout(1)
@@ -229,7 +229,7 @@ php_admin_value[disable_functions] = exec,passthru,shell_exec,system,proc_open,p
             self.user_command(slot, ['/usr/bin/mariadb-install-db', '--no-defaults', '--datadir=' + str(data),
                                      '--auth-root-authentication-method=socket', '--auth-root-socket-user=root', '--skip-test-db'])
             command(['/usr/sbin/restorecon', '-R', str(data)])
-        command(['/usr/bin/systemctl', 'start', 'veyra-db@' + slot])
+        command(['/usr/bin/systemctl', 'start', 'vectorcp-db@' + slot])
         for _ in range(60):
             if Path(self.db_socket(slot)).exists():
                 try:
@@ -334,7 +334,7 @@ php_admin_value[disable_functions] = exec,passthru,shell_exec,system,proc_open,p
             p = root / 'wp-config.php'
             cfg = p.read_text().replace("$table_prefix", "define('WP_SITEURL', '%s://%s');\ndefine('WP_HOME', '%s://%s');\n$table_prefix" % (scheme, site['domain'], scheme, site['domain']))
             p.write_text(cfg)
-            self.user_command(slot, ['/usr/bin/php', '/opt/veyrapanel/veyra/wp-install.php', str(root)], input=install_data, timeout=150)
+            self.user_command(slot, ['/usr/bin/php', '/opt/vectorcp/vectorcp/wp-install.php', str(root)], input=install_data, timeout=150)
             command(['/usr/sbin/restorecon', '-R', str(root)])
             self.start_php(slot)
             self.engine.publish_config(dict(site, runtime='wordpress'), site['status'])
@@ -342,7 +342,7 @@ php_admin_value[disable_functions] = exec,passthru,shell_exec,system,proc_open,p
             return {'runtime': 'wordpress', 'wordpress_version': version, 'database_name': database['name'], 'url': scheme + '://' + site['domain'] + '/wp-admin/'}
         except Exception:
             with contextlib.suppress(Exception):
-                command(['/usr/bin/systemctl', 'stop', 'veyra-php@' + slot])
+                command(['/usr/bin/systemctl', 'stop', 'vectorcp-php@' + slot])
             if switched:
                 shutil.rmtree(root, ignore_errors=True)
                 os.replace(old, root)
@@ -366,9 +366,9 @@ php_admin_value[disable_functions] = exec,passthru,shell_exec,system,proc_open,p
             raise Fault('Configure the panel public IP before issuing customer certificates.', 503)
         if records != {expected}:
             raise Fault('Point the domain A record to ' + expected + ' and remove other A/AAAA records before requesting HTTPS.', 409)
-        name = 'veyra-site-%d' % site['id']
-        command(['/opt/veyra-certbot/bin/certbot', 'certonly', '--non-interactive', '--agree-tos', '--register-unsafely-without-email',
-                 '--webroot', '--webroot-path=/srv/veyrapanel/acme', '--cert-name=' + name, '-d', site['domain']], timeout=150)
+        name = 'vectorcp-site-%d' % site['id']
+        command(['/opt/vectorcp-certbot/bin/certbot', 'certonly', '--non-interactive', '--agree-tos', '--register-unsafely-without-email',
+                 '--webroot', '--webroot-path=/srv/vectorcp/acme', '--cert-name=' + name, '-d', site['domain']], timeout=150)
         if site['runtime'] == 'wordpress':
             with self.paused(self.slot_for_site(site)):
                 self.task(self.slot_for_site(site), {'action': 'wordpress_https', 'site_id': site['id'], 'domain': site['domain']})
@@ -377,9 +377,9 @@ php_admin_value[disable_functions] = exec,passthru,shell_exec,system,proc_open,p
 
     @contextlib.contextmanager
     def paused(self, slot):
-        was_active = subprocess.run(['/usr/bin/systemctl', 'is-active', '--quiet', 'veyra-php@' + slot], check=False).returncode == 0
+        was_active = subprocess.run(['/usr/bin/systemctl', 'is-active', '--quiet', 'vectorcp-php@' + slot], check=False).returncode == 0
         if was_active:
-            command(['/usr/bin/systemctl', 'stop', 'veyra-php@' + slot])
+            command(['/usr/bin/systemctl', 'stop', 'vectorcp-php@' + slot])
         try:
             yield
         finally:

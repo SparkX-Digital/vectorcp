@@ -9,7 +9,7 @@ import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
 EXTENSIONS={'.py','.php','.js','.css','.svg','.html','.sh','.conf','.service','.timer','.md'}
-SPECIAL={'LICENSE','.gitignore','veyra-cert-renew'}
+SPECIAL={'LICENSE','.gitignore','vectorcp-cert-renew'}
 
 
 def main():
@@ -19,13 +19,13 @@ def main():
     output=args.output.absolute()
     if ROOT==output.parent or ROOT in output.parents:
         raise SystemExit('Put release archives outside the source tree.')
-    version=re.search(r'^__version__ = "([0-9.]+)"', (ROOT/'veyra/__init__.py').read_text(),re.M).group(1)
+    version=re.search(r'^__version__ = "([0-9.]+)"', (ROOT/'vectorcp/__init__.py').read_text(),re.M).group(1)
     files=[]
     for path in sorted(ROOT.rglob('*')):
         relative=path.relative_to(ROOT)
         if not path.is_file() or path.is_symlink() or any(part.startswith(('__pycache__','._','.git')) and part!='.gitignore' for part in relative.parts):
             continue
-        if len(relative.parts)>1 and relative.parts[0] not in ('veyra','deploy','tests'):
+        if len(relative.parts)>1 and relative.parts[0] not in ('vectorcp','deploy','tests','assets'):
             continue
         if path.suffix not in EXTENSIONS and path.name not in SPECIAL:
             continue
@@ -36,7 +36,7 @@ def main():
         for path in files:
             info=zipfile.ZipInfo(prefix+'/'+path.relative_to(ROOT).as_posix(),date_time=(2026,1,1,0,0,0))
             info.create_system=3
-            mode=0o755 if path.suffix=='.sh' or path.name=='veyra-cert-renew' else 0o644
+            mode=0o755 if path.suffix=='.sh' or path.name=='vectorcp-cert-renew' else 0o644
             info.external_attr=(stat.S_IFREG|mode)<<16
             info.compress_type=zipfile.ZIP_DEFLATED
             archive.writestr(info,path.read_bytes())

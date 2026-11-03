@@ -1,14 +1,14 @@
 [Unit]
 Description=VectorCP private HTTP interface
-After=veyra-agent.service
-Requires=veyra-agent.service
+After=vectorcp-agent.service
+Requires=vectorcp-agent.service
 
 [Service]
 Type=simple
-User=veyra-web
-Group=veyra-web
-WorkingDirectory=/opt/veyrapanel
-ExecStart=/usr/bin/python3 -m veyra.web --private --origin http://127.0.0.1:8765
+User=vectorcp-web
+Group=vectorcp-web
+WorkingDirectory=/opt/vectorcp
+ExecStart=/usr/bin/python3 -m vectorcp.web --private --origin http://127.0.0.1:8765
 Restart=on-failure
 RestartSec=3
 NoNewPrivileges=true
