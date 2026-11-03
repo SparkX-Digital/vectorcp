@@ -9,6 +9,36 @@ checksums, versioning and publication rules.
 
 No additional completed changes recorded.
 
+## 0.4.1 — 3 November 2026 · Development snapshot
+
+### Changed
+
+- Replace the overview with a searchable, grouped Tools directory and a server
+  or account information column. Keep account-management tools scoped to owners
+  and resellers.
+- Use a shared 40 px desktop / 44 px phone control scale, readable table and
+  helper text, 24 px / 16 px page gutters and compact, consistent panels.
+- Replace clipped phone navigation with an accessible drawer, keyboard focus
+  management, background isolation and Escape dismissal.
+- Label dialogs and table regions, focus initial fields, allow long values to
+  wrap and keep wide tables within keyboard-accessible scrolling regions.
+- Show visible page-loading status, fetch independent page data in parallel and
+  prevent older navigation responses from replacing newer selections.
+- Add filters for visible websites and accounts, clear empty search results,
+  active-plan validation and distinct destructive-action buttons.
+- Limit background job refresh to operation/status pages so file editors are
+  not rebuilt while an operator is typing.
+- Extend the target catalog to 253 workflows, explicitly separating remaining
+  mail operations, optional integrations and hosting-business billing.
+
+### Delivery limits
+
+- This interface update adds no mail transport, public DNS delegation or billing
+  backend. Planned catalog rows remain planned.
+- The 0.4.x installation layout still needs fresh Linux and migration acceptance.
+  Existing 0.3.x installations must not run the fresh installer or rename their
+  active directories. This snapshot is not a stable release.
+
 ## 0.4.0 — 3 November 2026 · Development snapshot
 
 ### Added

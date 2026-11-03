@@ -61,7 +61,9 @@ Applications, Backups, Metrics, Security and Preferences. The owner adds
 Accounts, Resellers, Plans, Services, Server health, Transfers, Network,
 Updates and Audit. Resellers see delegated business tools.
 
-Global search should find tools and permitted accounts. Each operation needs a
+Tool search finds implemented workspace tools. Searching permitted accounts is a
+separate planned workflow. See [INTERFACE.md](INTERFACE.md) for the shared
+layout, controls and review requirements. Each operation needs a
 clear result, useful validation, visible background progress where needed and
 a recoverable failure state. Empty screens explain the next available action.
 Keyboard access, mobile layouts and accessible labels are part of delivery.

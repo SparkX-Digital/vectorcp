@@ -4,7 +4,7 @@
 
 VectorCP is free, independently written software under the MIT license. Install
 it on your own server to manage websites, or use it to run a hosting business
-with owner, reseller and customer workspaces. Version 0.4.0 is a development
+with owner, reseller and customer workspaces. Version 0.4.1 is a development
 release. [Feature coverage](FEATURES.md) states the available tools and limits;
 the [product specification](PRODUCT.md) defines the wider scope being built.
 
@@ -53,7 +53,7 @@ See the [roadmap](ROADMAP.md) for the next capability gates.
 
 1. Sign in through `/admin`, `/reseller` or `/customer`. The agent authorizes each
    operation regardless of the entry URL.
-2. In **Hosting plans**, create a customer package. In **People**, create a
+2. In **Hosting plans**, create a customer package. In **Accounts**, create a
    customer with that package, then select **Enable hosting**. The owner may
    instead create a reseller package and reseller; that reseller creates its
    own customer packages and accounts.
@@ -61,7 +61,7 @@ See the [roadmap](ROADMAP.md) for the next capability gates.
    temporary application data. Enable hosting before creating the customer's
    websites; migration/resizing of existing allocations is not implemented.
 4. Add a website owned by that customer.
-5. In **Apps & hosting**, select the website and install WordPress, or enable
+5. In **Apps & databases**, select the website and install WordPress, or enable
    PHP and create a database. WordPress needs a fresh site containing only its
    welcome page. Keep the WordPress password separately from the panel password.
 6. Point the domain's A record to the server IP. Remove conflicting A/AAAA
@@ -158,12 +158,12 @@ The helper does not provision a domain, purchase a service or change SSH access.
 
 ### Installation layout and upgrades
 
-Version 0.4.0 uses the `vectorcp` Python package, `vectorcp-*` services and
+Version 0.4.1 uses the `vectorcp` Python package, `vectorcp-*` services and
 `/opt/vectorcp`, `/var/lib/vectorcp`, `/srv/vectorcp` and `/etc/vectorcp` paths.
 The upgrade helper requires this layout and refuses other installations.
 Versions 0.3.x and earlier require a separately verified migration; do not rename
 their directories or rerun the initial installer. Keep their existing services
-running until that migration is available. The 0.4.0 layout has local test
+running until that migration is available. The 0.4.1 layout has local test
 coverage; fresh Linux installation and migration acceptance remain pending.
 
 See [branding](BRANDING.md) for the public name and identity.

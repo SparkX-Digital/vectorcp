@@ -8,7 +8,7 @@ claim that every tool is implemented.
 **Available** means an implemented development capability, subject to the limits
 in [FEATURES.md](FEATURES.md). **Partial** means a narrower implementation exists.
 **Planned** means no complete backend/workflow is delivered. None of these labels
-asserts an independent security audit or production acceptance. Version 0.4.0
+asserts an independent security audit or production acceptance. The 0.4.x
 installation-layout validation remains separate from earlier service evidence.
 
 Stable IDs identify work items and acceptance evidence. A row is a user workflow,
@@ -34,6 +34,7 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 | VCP-0109 | Signed release channels and scheduled updates | Planned |
 | VCP-0110 | OS updates and maintenance reboot windows | Planned |
 | VCP-0111 | Independent clean-server recovery | Planned |
+| VCP-0112 | Uninstall planning, data preservation and service cleanup | Planned |
 
 ## Identity and access
 
@@ -75,6 +76,7 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 | VCP-0311 | Dedicated/shared address assignment | Planned |
 | VCP-0312 | Restricted shell access policy | Planned |
 | VCP-0313 | Account demo mode | Planned |
+| VCP-0314 | Audited owner/delegate sign-on to a customer workspace | Planned |
 
 ## Plans and reseller business
 
@@ -97,6 +99,7 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 | VCP-0411 | Reseller shared IP and dedicated address pools | Planned |
 | VCP-0412 | Nested reseller tiers | Planned |
 | VCP-0413 | Reseller customer exports and remote backups | Planned |
+| VCP-0414 | Reseller usage reports and customer communications | Planned |
 
 ## Websites and domains
 
@@ -120,6 +123,7 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 | VCP-0512 | Password-protected directories | Planned |
 | VCP-0513 | Hotlink and credential-sharing controls | Planned |
 | VCP-0514 | Proxy-aware visitor address handling | Planned |
+| VCP-0515 | Optional visual website builder and exportable site output | Planned |
 
 ## Certificates
 
@@ -183,6 +187,7 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 | VCP-0812 | Server database profiles and configuration | Planned |
 | VCP-0813 | Database process inspection and safe cancellation | Planned |
 | VCP-0814 | Database engine upgrades and restoration | Planned |
+| VCP-0815 | Database ownership maps and orphan reconciliation | Planned |
 
 ## Email and collaboration
 
@@ -211,6 +216,11 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 | VCP-0917 | Sending limits shared by SMTP and website scripts | Planned |
 | VCP-0918 | Calendars, contacts and sharing permissions | Planned |
 | VCP-0919 | External SMTP relay with verified TLS | Planned |
+| VCP-0920 | Mail queue inspection, retry, freeze and bounded removal | Planned |
+| VCP-0921 | Greylisting and trusted sender exemptions | Planned |
+| VCP-0922 | Inbound domain and country policies | Planned |
+| VCP-0923 | Server relayer, sent-mail and delivery summary reports | Planned |
+| VCP-0924 | Mailbox format migration and permission repair | Planned |
 
 ## DNS
 
@@ -232,6 +242,7 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 | VCP-1010 | DNS-only nodes and cluster replication | Planned |
 | VCP-1011 | External DNS record synchronization | Planned |
 | VCP-1012 | Proxy, TLS mode and external cache controls | Planned |
+| VCP-1013 | Zone deletion, cleanup, rebuild and consistency repair | Planned |
 
 ## PHP, apps and development
 
@@ -254,6 +265,7 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 | VCP-1111 | Container application catalog and persistence | Planned |
 | VCP-1112 | Optional third-party app installers | Planned |
 | VCP-1113 | Application logs, health checks and restart | Planned |
+| VCP-1114 | Panel maintenance schedules and task configuration | Planned |
 
 ## WordPress
 
@@ -316,6 +328,7 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 | VCP-1409 | Threshold alerts and contact routing | Planned |
 | VCP-1410 | Notification inbox and delivery preferences | Planned |
 | VCP-1411 | Log rotation and retention policies | Planned |
+| VCP-1412 | Traffic report engines, account selection and processing schedules | Planned |
 
 ## Security operations
 
@@ -339,6 +352,8 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 | VCP-1512 | Threat-feed updates and protection profiles | Planned |
 | VCP-1513 | Owner terminal with elevated-action MFA | Planned |
 | VCP-1514 | Security audit export and incident evidence | Planned |
+| VCP-1515 | OS administrator credential rotation with access recovery | Planned |
+| VCP-1516 | User-directory exposure and network diagnostic policies | Planned |
 
 ## Server and network operations
 
@@ -360,6 +375,8 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 | VCP-1610 | Contact manager and system-mail routing | Planned |
 | VCP-1611 | Configuration clustering and linked nodes | Planned |
 | VCP-1612 | Graceful/forced reboot with service recovery | Planned |
+| VCP-1613 | Package database diagnostics and supported repair | Planned |
+| VCP-1614 | Server configuration presets and validated advanced settings | Planned |
 
 ## Transfers and migration
 
@@ -398,13 +415,40 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 | VCP-1810 | Authorized MCP tools and provider connections | Planned |
 | VCP-1811 | AI settings, budgets and explicit change approval | Planned |
 | VCP-1812 | Conflict-aware action history and eligible undo | Planned |
+| VCP-1813 | Locale authoring, copy, import and export | Planned |
+| VCP-1814 | Optional social publishing integration with scoped consent | Planned |
+| VCP-1815 | Redacted support bundles and diagnostic reports | Planned |
+| VCP-1816 | Optional integration catalog, license and update inventory | Planned |
+
+## Hosting business and billing
+
+**Roles:** Owner / Authorized reseller.
+
+**Completion check:** Provisioning is idempotent and respects hosting permissions;
+payment webhooks are authenticated, retried safely and reconciled with invoices.
+Panel installation and use never require a paid license or activation service.
+
+| ID | Capability | Status |
+| --- | --- | --- |
+| VCP-1901 | Hosting product catalog and customer checkout | Planned |
+| VCP-1902 | Customer portal and service ownership | Planned |
+| VCP-1903 | Invoices, credits and auditable adjustments | Planned |
+| VCP-1904 | Recurring subscriptions, renewals and proration | Planned |
+| VCP-1905 | Optional payment gateways and authenticated webhooks | Planned |
+| VCP-1906 | Tax configuration, currencies and invoice numbering | Planned |
+| VCP-1907 | Provision, suspend, unsuspend and cancel paid services | Planned |
+| VCP-1908 | Billing roles, reseller balances and spending permissions | Planned |
+| VCP-1909 | Revenue reports, reconciliation and exports | Planned |
+| VCP-1910 | Billing notices, delivery logs and customer preferences | Planned |
 
 ## Coverage limits
 
 The public demonstrations used for research omit pages and disable operations.
 This list covers the visible tool families and the additional planned service
 requirements; it cannot establish every hidden setting, API contract or edge
-case. New discoveries extend the catalog through reviewed work items.
+case. New discoveries extend the catalog through reviewed work items. Optional builders,
+social publishing and commercial services require their own original integration;
+a link or a similar-looking screen does not establish equivalent behavior.
 
 Do not mark an entire family complete because one row works. Each capability
 needs authorization, failure, quota, concurrency, upgrade and recovery checks.
