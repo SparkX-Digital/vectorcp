@@ -3,11 +3,14 @@
 This is an early development release. No independent security audit, production
 support commitment or response-time guarantee has been established.
 
+Report suspected vulnerabilities through [GitHub's private reporting form](https://github.com/SparkX-Digital/vectorcp/security/advisories/new).
+Private vulnerability reporting is enabled for the public repository. Reports
+are directed to the repository's maintainers and owners; no response-time
+guarantee is offered. There is no separate security mailbox or long-term
+supported release policy yet.
+
 Do not post private keys, login details, customer data or a working exploit for
-a live installation in a public issue. Use a repository host's private security
-advisory facility once the public project is established. A monitored reporting
-address and supported-version policy must be configured before public launch;
-none is invented here.
+a live installation in a public issue. Use synthetic examples for reproduction.
 
 A useful report gives the affected release, platform, prerequisite role, exact
 reproduction using synthetic data, expected versus observed behavior and impact.

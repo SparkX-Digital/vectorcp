@@ -196,8 +196,9 @@ crash/disk-exhaustion recovery and comprehensive acceptance testing are pending.
 
 See [architecture](ARCHITECTURE.md), [contributing](CONTRIBUTING.md),
 [security](SECURITY.md), [changelog](CHANGELOG.md) and [coverage](FEATURES.md).
-A public repository URL and monitored vulnerability-reporting channel have not
-yet been established. This source archive can be used and modified under MIT.
+Use GitHub Issues for ordinary bugs and proposals. Report suspected
+vulnerabilities privately using the route in `SECURITY.md`. This source can be
+used and modified under MIT.
 
 The VectorCP source is independently written under the included MIT license.
 PHP, MariaDB, WordPress and certificate tooling retain their own licenses.
