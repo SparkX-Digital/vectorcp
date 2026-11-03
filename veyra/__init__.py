@@ -1,0 +1,2 @@
+"""VectorCP: an independently written hosting control plane."""
+__version__ = "0.3.1"
