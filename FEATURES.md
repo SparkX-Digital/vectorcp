@@ -50,7 +50,7 @@ evidence. Features can move between milestones when dependencies require it.
 | Page cache | Planned; not implemented. | Site-level enablement and purge; bypass of private and commerce pages | No personalized response leakage; cache invalidation tests |
 | Object caches | Planned; not implemented. | Account-specific Redis and Memcached | One customer cannot read another customer's cache |
 | Certificates | Partial: IP/customer HTTP-01 TLS and renewal. Aliases/mail certificates pending. | ACME issue and renewal; aliases; forced HTTPS; mail and webmail TLS | Validation failure recovery; real certificate verification and renewal rehearsal |
-| Files | Partial: bounded text editing and folders. Upload, trash and archives pending. | File browsing, edits, permissions, transfers, archives and trash | Traversal, symlink, archive-escape, ownership and quota tests |
+| Files | Partial: text editing, 32 MiB binary transfers/copy, move/rename, filename search and confirmed removal. Trash, archives and batch selection pending. | File browsing, edits, permissions, transfers, archives and trash | Traversal, symlink, archive-escape, ownership and quota tests |
 | FTP and SSH | Planned; not implemented. | Account access, keys, plan restrictions and jailed customer shells | No access to other homes or host secrets; changes preserve administrator access |
 | Terminals | Planned; not implemented. | Customer jail; administrator sudo workflow with two-factor gate and timeout | Server-side role checks; session teardown; escape testing |
 | Scheduled tasks | Planned; not implemented. | Account-owned cron entries within plan limits | Environment and resource limits enforced; invalid expressions refused |

@@ -4,7 +4,7 @@
 
 VectorCP is free, independently written software under the MIT license. Install
 it on your own server to manage websites, or use it to run a hosting business
-with owner, reseller and customer workspaces. Version 0.4.1 is a development
+with owner, reseller and customer workspaces. Version 0.4.2 is a development
 release. [Feature coverage](FEATURES.md) states the available tools and limits;
 the [product specification](PRODUCT.md) defines the wider scope being built.
 
@@ -104,7 +104,12 @@ are immutable; retire them or assign a different package explicitly. Existing
 physical volumes must keep the same storage size during reassignment.
 
 The text editor supports UTF-8 files up to 256 KB. File listing shows at most
-1000 entries per folder. Panel creation is limited to 12,000 entries per hosted
+1000 entries per folder. Binary upload/download and regular-file copy support
+32 MiB, with private resumable staging, checksums and no-overwrite publication.
+The file manager also provides move/rename, filename search and confirmed removal
+of regular files or empty folders. See [FILE_MANAGER.md](FILE_MANAGER.md) for
+transfer limits, permissions, recovery and remaining file workflows.
+Panel creation is limited to 12,000 entries per hosted
 site; application writes are constrained by volume capacity. Backups support
 200 MB of files, 16 MB per individual file, 12,000 entries, and 64 MB of database
 SQL. Up to 5 copies / 512 MB per customer and 2 GiB total are retained. PHP pauses
@@ -145,7 +150,6 @@ Install or refresh the optional native service profiles as needed:
 ```sh
 bash deploy/hosting-install.sh --apply
 bash deploy/dns-install.sh --apply
-systemctl restart vectorcp-agent vectorcp-web vectorcp-web-public
 ```
 
 The hosting helper installs official AlmaLinux PHP 8.3/MariaDB 10.11 packages
@@ -154,17 +158,22 @@ and disables the unused shared default PHP/MariaDB services. Customer workloads
 start on demand. SQLite migrations are additive and preserve existing owner
 credentials, sites and sessions. Back up before upgrading. Clean-image recovery,
 unrelated hosting stacks and distribution/version migrations are not tested.
-The helper does not provision a domain, purchase a service or change SSH access.
+The helpers serialize profile changes, refuse active hosting jobs and restart
+and health-check the core panel services. They do not provision a domain,
+purchase a service or change SSH access.
 
 ### Installation layout and upgrades
 
-Version 0.4.1 uses the `vectorcp` Python package, `vectorcp-*` services and
+Version 0.4.2 uses the `vectorcp` Python package, `vectorcp-*` services and
 `/opt/vectorcp`, `/var/lib/vectorcp`, `/srv/vectorcp` and `/etc/vectorcp` paths.
 The upgrade helper requires this layout and refuses other installations.
 Versions 0.3.x and earlier require a separately verified migration; do not rename
 their directories or rerun the initial installer. Keep their existing services
-running until that migration is available. The 0.4.1 layout has local test
-coverage; fresh Linux installation and migration acceptance remain pending.
+running until that migration is available. The 0.4.x layout has native AlmaLinux 9
+x86-64 service evidence as well as local tests. Older-layout migration acceptance
+remains pending. See
+[LINUX_ACCEPTANCE.md](LINUX_ACCEPTANCE.md) for the disposable-host procedure and
+[VERIFICATION.md](VERIFICATION.md) for the tested versions and limits.
 
 See [branding](BRANDING.md) for the public name and identity.
 
