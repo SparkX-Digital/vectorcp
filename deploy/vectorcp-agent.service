@@ -1,0 +1,32 @@
+[Unit]
+Description=VectorCP privileged agent
+After=network.target nginx.service
+Requires=nginx.service
+
+[Service]
+Type=simple
+User=root
+Group=vectorcp-web
+WorkingDirectory=/opt/vectorcp
+ExecStart=/usr/bin/python3 -m vectorcp.agent
+Restart=on-failure
+RestartSec=3
+UMask=0077
+RuntimeDirectory=vectorcp
+RuntimeDirectoryMode=0750
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+ReadWritePaths=/var/lib/vectorcp /srv/vectorcp /etc/nginx/conf.d /var/log/nginx /run/vectorcp
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+MemoryMax=256M
+TasksMax=32
+
+[Install]
+WantedBy=multi-user.target
