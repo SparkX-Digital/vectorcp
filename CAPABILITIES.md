@@ -23,14 +23,14 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 
 | ID | Capability | Status |
 | --- | --- | --- |
-| VCP-0101 | Preflight and fresh-host installation | Partial |
+| VCP-0101 | Preflight and fresh-host installation | Available |
 | VCP-0102 | Private first-time owner setup | Available |
 | VCP-0103 | Core, Complete and DNS-node profiles | Planned |
 | VCP-0104 | Installation progress and safe retry | Planned |
 | VCP-0105 | Trusted panel HTTPS and renewal | Partial |
 | VCP-0106 | Offline operation without activation | Available |
 | VCP-0107 | Architecture and platform checks | Partial |
-| VCP-0108 | Versioned application upgrades and startup rollback | Partial |
+| VCP-0108 | Versioned application upgrades and startup rollback | Available |
 | VCP-0109 | Signed release channels and scheduled updates | Planned |
 | VCP-0110 | OS updates and maintenance reboot windows | Planned |
 | VCP-0111 | Independent clean-server recovery | Planned |
@@ -152,12 +152,12 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 | --- | --- | --- |
 | VCP-0701 | Browse files and create folders | Available |
 | VCP-0702 | Bounded atomic UTF-8 text editing | Available |
-| VCP-0703 | Upload and download individual files | Partial |
-| VCP-0704 | Copy, move, rename and batch selection | Planned |
-| VCP-0705 | Trash, undo and permanent removal | Planned |
+| VCP-0703 | Upload and download individual files | Available |
+| VCP-0704 | Copy, move, rename and batch selection | Partial |
+| VCP-0705 | Trash, undo and permanent removal | Partial |
 | VCP-0706 | Archive create/extract with safe paths | Planned |
 | VCP-0707 | File permission and ownership controls | Planned |
-| VCP-0708 | Hidden-file controls and search | Planned |
+| VCP-0708 | Hidden-file controls and search | Partial |
 | VCP-0709 | Image resize, thumbnails and conversion | Planned |
 | VCP-0710 | Disk/inode usage drill-down | Planned |
 | VCP-0711 | FTP/FTPS accounts and client configuration | Planned |

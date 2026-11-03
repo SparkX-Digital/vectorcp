@@ -3,6 +3,17 @@
 set -euo pipefail
 [[ ${1:-} == --apply ]] || { echo 'Usage: sudo bash dns-install.sh --apply'; exit 2; }
 [[ $EUID == 0 && -d /opt/vectorcp/vectorcp && -f /etc/almalinux-release ]] || { echo 'Requires an existing VectorCP installation on AlmaLinux 9.'; exit 1; }
+exec 9>/run/vectorcp-profile-maintenance.lock
+flock -n 9 || { echo 'Another service-profile change is running.' >&2; exit 1; }
+[[ ! -e /run/vectorcp-profile-maintenance ]] || { echo 'Inspect the previous interrupted profile change before retrying.' >&2; exit 1; }
+install -m 0600 /dev/null /run/vectorcp-profile-maintenance
+trap 'rm -f /run/vectorcp-profile-maintenance' EXIT
+python3 - <<'PY'
+import sqlite3
+with sqlite3.connect('/var/lib/vectorcp/control.sqlite3') as db:
+    if db.execute("SELECT 1 FROM jobs WHERE status IN ('queued','running')").fetchone():
+        raise SystemExit('A hosting job is running. Retry after it finishes.')
+PY
 if systemctl is-active --quiet named && [[ ! -f /etc/vectorcp/dns/installed.json ]]; then
   echo 'An existing DNS service is running. Refusing to replace it.'; exit 1
 fi
@@ -75,4 +86,11 @@ done
 [[ $ready == true ]] || { echo 'DNS service did not become ready; inspect its journal.'; exit 1; }
 printf '%s\n' '{"mode":"private","listen":"127.0.0.1:53"}' > /etc/vectorcp/dns/installed.json
 chmod 0600 /etc/vectorcp/dns/installed.json
+systemctl restart vectorcp-agent vectorcp-web
+ready=false
+for attempt in {1..30}; do
+  if curl --fail --silent http://127.0.0.1:8765/healthz; then ready=true; break; fi
+  sleep 1
+done
+[[ $ready == true ]] || { echo 'Panel services did not recover; inspect their journal before retrying.' >&2; exit 1; }
 echo 'Private authoritative DNS installed. No public firewall changes made.'

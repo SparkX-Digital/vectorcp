@@ -9,6 +9,41 @@ checksums, versioning and publication rules.
 
 No additional completed changes recorded.
 
+## 0.4.2 — 3 November 2026 · Development snapshot
+
+### Added
+
+- Verified binary upload/download and regular-file copy up to 32 MiB. Uploads
+  use bounded private staging, sequential retried chunks, one-hour expiry,
+  restart recovery and idempotent completion receipts.
+- Move/rename files and folders without replacing existing destinations, scoped
+  filename search, and confirmed removal of regular files or empty directories.
+- Ordinary file actions, upload progress and search controls in the existing
+  responsive file manager. Keep the shared control, spacing and dialog scales.
+- An explicit opt-in native Linux acceptance harness for unused disposable
+  installations, plus file operation and HTTP transfer boundary tests.
+
+### Fixed
+
+- Prepare certificate/ACME directories before granting the hosting agent access;
+  fresh private installations no longer require prior public certificate setup.
+- Restart and health-check the core panel after adding hosting/DNS unit paths.
+  Serialize profile changes and refuse active hosting jobs.
+- Refuse a setup-token request on an initialized installation before running
+  agent startup recovery, preserving live job state.
+- Preserve operation-specific storage/conflict errors after opening a directory
+  instead of reporting every downstream filesystem error as a missing folder.
+
+### Validation and limits
+
+- Native AlmaLinux 9 x86-64 service, isolation, SQL, backup/restore, upgrade,
+  deliberate startup rollback and reboot checks are recorded in VERIFICATION.md.
+- File transfer limits and internal operations are documented in FILE_MANAGER.md.
+  Recursive/batch copying, hidden-file controls, trash/undo, archives and file
+  permission editing remain separate work.
+- Older-layout migration, email, public authoritative DNS, billing and the wider
+  catalog remain unfinished. This is not a stable production release.
+
 ## 0.4.1 — 3 November 2026 · Development snapshot
 
 ### Changed

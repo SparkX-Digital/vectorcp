@@ -1,3 +1,97 @@
+# VectorCP 0.4.2 file operations and native installation verification
+
+Verified 3 November 2026. This remains a development snapshot. The catalog now
+contains **253 workflows: 34 Available, 26 Partial and 193 Planned**. Fresh-host
+installation, application upgrade/startup rollback and bounded individual file
+transfers now have implementation and acceptance evidence. Copy/move, permanent
+removal and search have narrower implementations; their broader catalog rows
+remain Partial.
+
+## Automated and browser checks
+
+All 70 local unit and HTTP tests passed on Python 3.13 in 43.631 seconds.
+They include tenant and actor ownership, CSRF, traversal/symlinks/special files,
+no-overwrite conflicts, changed-source revisions, upload offset retries,
+checksum rejection, staging/entry/quota limits, agent restart recovery, simulated
+full storage, scoped search and a complete binary transfer through HTTP.
+The setup-token regression check preserves a live running job. Maintenance
+blocks new hosting jobs. JavaScript, Python and deployment shell syntax passed.
+
+The actual file-manager interface was checked at 320, 390, 463, 768, 1280 and
+1920 px widths: no document overflow and no visible button below the shared
+40 px desktop / 44 px phone minimum. A 3,145,984-byte binary was uploaded,
+downloaded, copied, renamed and found using the actual browser controls.
+The local source, stored upload, copy and downloaded file had identical SHA-256:
+`679361bf172a2b2f3d48919ee7b2b6fea9cf6e351005736ac7274ac8fde4e0f2`.
+Permanent removal was exercised by backend/native acceptance; its browser
+confirmation and Cancel path were checked without deleting retained user data.
+
+## Native clean-host evidence
+
+A private disposable KVM guest used the official AlmaLinux 9.8 x86-64 GenericCloud
+image `AlmaLinux-9-GenericCloud-9.8-20261102.x86_64.qcow2`. Its checksum was verified
+against the signed official CHECKSUM using the AlmaLinux 9 signing key:
+
+- Image SHA-256: `6f94881458dfe966474544b12e86d078d81a600457188045d317b0ce3c3bdca7`.
+- Signing-key fingerprint: `BF18AC2876178908D6E71267D36CB86CB86B3716`.
+- Guest: one vCPU, 1,536 MiB configured RAM and a 16 GiB sparse disk. The host
+  bounded the test workload's CPU and memory and exposed guest SSH on host
+  loopback only. No public firewall or existing website configuration changed.
+
+An empty second guest installed the 0.4.2 candidate with `install.sh --check`
+and `--apply`, then the native hosting and private DNS helpers. The published
+opt-in `tests/acceptance_linux.py` completed its checks on that installation:
+
+- Panel, web, Nginx and private DNS active with SELinux Enforcing.
+- Fresh installer refuses an existing application; private owner setup works.
+- Two 512 MiB customer volumes and correctly scoped customer sessions/sites.
+- Customer PHP and private MariaDB work; reads of a sibling volume and control
+  database fail. Database network permission remains off; no TCP SQL listener.
+- A local files/SQL backup restores both the website file and database value,
+  retaining a working PHP site.
+- A 3,145,984-byte binary upload resumes after restarting the agent; verified
+  download, idempotent finish, copy, move, search and removal work on actual
+  isolated customer storage.
+
+The clean candidate archive used for this run was SHA-256
+`4df048c80ba51091f04edfc40f8915bd04d9dfa9b2c1f2501afa0b233b69faf5`.
+It is a private acceptance fixture, not the immutable public source archive;
+publication adds the final evidence documentation without changing those runtime
+files. See [LINUX_ACCEPTANCE.md](LINUX_ACCEPTANCE.md) to reproduce the procedure.
+
+## Upgrade and reboot evidence
+
+A first disposable guest installed the previous 0.4.1 source and exposed two
+fresh-profile issues: missing certificate directories broke agent mount setup,
+and new DNS writable paths did not take effect without restarting the agent.
+The 0.4.2 helpers fixed both; retry recovered the guest and passed native hosting
+and backup/restore checks.
+
+The actual application upgrade helper then upgraded that initialized guest to
+0.4.2 while preserving owner/customer sessions, files and SQL. Applying a private
+source copy with a deliberate import-time failure triggered startup rollback.
+The helper restored the previous application and retained its database snapshot;
+the authenticated panel and PHP/database probe worked afterwards.
+
+A guest reboot changed its boot ID. Both customer ext4 volumes remounted;
+panel, web, Nginx, DNS, customer PHP and database services recovered. The PHP
+probe returned the restored SQL value and continued to deny sibling/control
+state reads. The existing integration host's services remained active.
+
+## Remaining boundaries
+
+This work does not verify trusted public certificate issue/renewal under the new
+layout, public DNS delegation, mail, older-layout migration, independent disaster
+recovery, alternate platforms, sustained hostile load or a production security
+audit. The existing 0.3.x integration installation is still running its original
+backend layout; new APIs are accepted on the private native 0.4.2 installation.
+Do not deploy its new frontend onto an older backend or rename active storage.
+The wider unfinished catalog remains accurately marked.
+
+Earlier evidence below is retained for its original version and scope.
+
+---
+
 # VectorCP 0.4.1 interface snapshot verification
 
 All 56 existing tests passed locally on Python 3.13 in 42.998 seconds during

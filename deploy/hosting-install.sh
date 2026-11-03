@@ -3,6 +3,19 @@
 set -euo pipefail
 [[ ${EUID} == 0 && -d /opt/vectorcp/vectorcp && -f /var/lib/vectorcp/control.sqlite3 ]] || exit 1
 [[ ${1:-} == --apply ]] || { echo 'Use --apply on the existing dedicated VectorCP host.'; exit 0; }
+# Block new jobs before checking existing ones. The marker is transient and the
+# lock prevents two native service installers from changing units concurrently.
+exec 9>/run/vectorcp-profile-maintenance.lock
+flock -n 9 || { echo 'Another service-profile change is running.' >&2; exit 1; }
+[[ ! -e /run/vectorcp-profile-maintenance ]] || { echo 'Inspect the previous interrupted profile change before retrying.' >&2; exit 1; }
+install -m 0600 /dev/null /run/vectorcp-profile-maintenance
+trap 'rm -f /run/vectorcp-profile-maintenance' EXIT
+python3 - <<'PY'
+import sqlite3
+with sqlite3.connect('/var/lib/vectorcp/control.sqlite3') as db:
+    if db.execute("SELECT 1 FROM jobs WHERE status IN ('queued','running')").fetchone():
+        raise SystemExit('A hosting job is running. Retry after it finishes.')
+PY
 if ! command -v php-fpm >/dev/null || ! command -v mariadbd >/dev/null; then
   dnf -y module enable php:8.3 mariadb:10.11
   dnf -y install php-fpm php-cli php-mysqlnd php-gd php-mbstring php-xml php-opcache php-intl php-zip mariadb-server mariadb e2fsprogs acl policycoreutils-python-utils
@@ -12,6 +25,8 @@ fi
 systemctl mask --now php-fpm.service mariadb.service
 install -d -m 700 /var/lib/vectorcp/disks /var/lib/vectorcp/hosting
 install -d -m 755 /srv/vectorcp/accounts /etc/vectorcp/hosting /run/vectorcp-hosting
+install -d -m 0700 /etc/letsencrypt /var/lib/letsencrypt /var/log/letsencrypt
+install -d -m 0755 /srv/vectorcp/acme
 cat >/etc/systemd/system/vectorcp-customers.slice <<'UNIT'
 [Unit]
 Description=VectorCP customer workload budget
@@ -193,7 +208,15 @@ if [[ -f /etc/systemd/system/vectorcp-cert-renew.service ]]; then
   sed -i 's/ --cert-name vectorcp-panel-ip//' /etc/systemd/system/vectorcp-cert-renew.service
 fi
 systemctl daemon-reload
-systemctl restart nginx
 printf '1\n' >/var/lib/vectorcp/hosting/enabled
 chmod 600 /var/lib/vectorcp/hosting/enabled
+restorecon -R /srv/vectorcp/acme
+nginx -t
+systemctl restart nginx vectorcp-agent vectorcp-web
+ready=false
+for attempt in {1..30}; do
+  if curl --fail --silent http://127.0.0.1:8765/healthz; then ready=true; break; fi
+  sleep 1
+done
+[[ $ready == true ]] || { echo 'Panel services did not recover; inspect their journal before retrying.' >&2; exit 1; }
 echo 'Isolated hosting services prepared. No customer workloads started.'

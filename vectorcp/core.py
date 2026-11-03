@@ -154,6 +154,8 @@ class Engine:
         self.hosting = Hosting(self)
         from .dns import DNS
         self.dns = DNS(self)
+        from .filetools import FileTools
+        self.filetools = FileTools(self)
         os.chmod(self.db_path, 0o600)
 
     @contextlib.contextmanager
@@ -262,11 +264,14 @@ class Engine:
             return self.login(data)
         if method == "bootstrap":
             return self.bootstrap(data)
+        from .filetools import OPERATIONS as file_operations, READ_ONLY as file_reads
         allowed = {"overview", "accounts.list", "accounts.create", "accounts.active", "sites.list", "sites.create", "sites.active",
                    "files.list", "files.read", "files.write", "files.mkdir", "backups.list", "backups.create", "backups.download", "audit", "logout", "hosting.enable", "hosting.php", "hosting.wordpress", "hosting.tls", "databases.create", "databases.list", "databases.credentials", "jobs.list", "backups.full", "backups.restore", "backups.delete", "backups.describe", "backups.chunk", "plans.list", "plans.create", "plans.active", "plans.assign", "dns.list", "dns.create", "dns.save", "dns.delete", "dns.export", "dns.verify"}
+        allowed |= file_operations
         if method not in allowed:
             raise Fault("Unknown operation.", 404)
         read_only = method in {"overview", "accounts.list", "sites.list", "files.list", "files.read", "backups.list", "backups.download", "audit", "jobs.list", "databases.list", "databases.credentials", "backups.describe", "backups.chunk", "plans.list", "dns.list", "dns.export"}
+        read_only = read_only or method in file_reads
         with self.lock, self.db() as db:
             actor = self.authenticate(db, request.get("token"))
             if not read_only:
@@ -310,6 +315,8 @@ class Engine:
                 return self.backup(db, actor, method, data)
             site = self.owned_site(db, actor, data.get("site_id"))
             self.site_idle(db, site)
+            if method in file_operations:
+                return self.filetools.dispatch(db, actor, site, method, data)
             if method == 'databases.credentials':
                 if not site['database_name']:
                     raise Fault('This website has no database.', 404)
@@ -491,15 +498,19 @@ class Engine:
         parts = relative.split("/") if relative else []
         if any(p in ("", ".", "..") or p.startswith(".") or "\\" in p or len(p) > 200 for p in parts):
             raise Fault("Use a relative path without hidden folders or parent references.")
-        fd = os.open(str(root), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        fd = None
         try:
+            fd = os.open(str(root), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
             for part in parts:
                 new_fd = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
                 os.close(fd)
                 fd = new_fd
-            yield fd
         except OSError:
+            if fd is not None:
+                os.close(fd)
             raise Fault("Folder not found or access refused.", 404)
+        try:
+            yield fd
         finally:
             os.close(fd)
 
@@ -523,6 +534,7 @@ class Engine:
     def files(self, db, actor, site, method, data):
         root, path = self.site_root(site), data.get("path", "")
         if method == "files.list":
+            from .filetools import revision
             result = []
             with self.directory(root, path) as fd:
                 for name in sorted(os.listdir(fd))[:1000]:
@@ -530,7 +542,7 @@ class Engine:
                         continue
                     st = os.stat(name, dir_fd=fd, follow_symlinks=False)
                     if stat.S_ISREG(st.st_mode) or stat.S_ISDIR(st.st_mode):
-                        result.append({"name": name, "directory": stat.S_ISDIR(st.st_mode), "bytes": st.st_size, "modified": int(st.st_mtime)})
+                        result.append({"name": name, "directory": stat.S_ISDIR(st.st_mode), "bytes": st.st_size, "modified": int(st.st_mtime), "revision": revision(st)})
             return {"files": result}
         folder, name = self.file_parts(path)
         with self.directory(root, folder) as fd:
@@ -686,6 +698,8 @@ class Engine:
         return {"ok": True, "id": backup_id}
 
     def hosting_job(self, db, actor, action, data):
+        if not self.development and Path('/run/vectorcp-profile-maintenance').exists():
+            raise Fault('Server components are being maintained. Retry when maintenance finishes.', 409)
         if not self.hosting.enabled:
             raise Fault('Isolated hosting is not installed on this server.', 409)
         site = None

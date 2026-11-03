@@ -101,6 +101,14 @@ def main():
     os.umask(0o077)
     if not args.development and (os.geteuid() != 0 or not hasattr(socket, "SO_PEERCRED")):
         parser.error("Production mode requires root on Linux.")
+    if args.setup_token:
+        # This helper must not run startup recovery against a live agent's jobs.
+        import sqlite3
+        existing = Path(args.state).absolute() / 'control.sqlite3'
+        if existing.exists():
+            with sqlite3.connect(existing.as_uri() + '?mode=ro', uri=True) as db:
+                if db.execute('SELECT 1 FROM users LIMIT 1').fetchone():
+                    parser.error('Administrator is already configured.')
     engine = Engine(args.state, args.sites, args.nginx, args.development)
     if args.setup_token:
         print(engine.setup_token())

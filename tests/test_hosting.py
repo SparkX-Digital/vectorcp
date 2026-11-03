@@ -1,4 +1,6 @@
 import io
+import subprocess
+import sys
 import tarfile
 import time
 import unittest
@@ -34,6 +36,24 @@ class HostingBoundaries(unittest.TestCase):
         self.refused(409, lambda: self.call(self.alice,'files.write',{'site_id':self.a_site,'path':'new.txt','content':'x','revision':'new'}))
         self.refused(409, lambda: self.call(self.alice,'sites.create',{'domain':'new.example.com'}))
         self.call(self.bob,'files.list',{'site_id':self.b_site})
+
+    def test_profile_maintenance_refuses_new_jobs(self):
+        self.engine.development = False
+        with patch('vectorcp.core.Path.exists', return_value=True):
+            self.refused(409, lambda: self.call(self.admin, 'hosting.enable', {'id': self.alice['user']['id']}))
+        with self.engine.db() as db:
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM jobs').fetchone()[0], 0)
+
+    def test_setup_token_helper_does_not_fail_a_live_job(self):
+        with self.engine.db() as db:
+            db.execute("INSERT INTO jobs VALUES('live',?,?,'backups.full','running','Busy',1,1)", (self.alice['user']['id'], self.a_site))
+        result = subprocess.run([sys.executable, '-m', 'vectorcp.agent', '--development',
+            '--state', str(self.engine.state), '--sites', str(self.engine.sites), '--setup-token'],
+            capture_output=True, text=True, timeout=10)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('already configured', result.stderr)
+        with self.engine.db() as db:
+            self.assertEqual(db.execute("SELECT status FROM jobs WHERE id='live'").fetchone()[0], 'running')
 
     def test_backup_stream_and_deletion_require_ownership(self):
         backup=self.call(self.alice,'backups.create',{'site_id':self.a_site})['id']
