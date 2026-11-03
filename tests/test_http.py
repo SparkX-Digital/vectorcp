@@ -1,4 +1,6 @@
 import http.client
+import base64
+import hashlib
 import json
 from pathlib import Path
 import secrets
@@ -90,6 +92,32 @@ class HttpBoundaryTests(unittest.TestCase):
         payload = {"method": "sites.create", "data": {"domain": "http.example.com"}}
         self.assertEqual(self.request("POST", "/api", payload, {"Cookie": cookie})[0], 403)
         self.assertEqual(self.request("POST", "/api", payload, {"Cookie": cookie, "X-CSRF-Token": csrf})[0], 200)
+
+    def test_binary_transfer_operations_use_cookie_csrf_and_exact_content(self):
+        cookie, csrf, _ = self.login()
+        headers = {'Cookie': cookie, 'X-CSRF-Token': csrf}
+        def call(method, data):
+            status, _, body = self.request('POST', '/api', {'method': method, 'data': data}, headers)
+            self.assertEqual(status, 200, body)
+            return json.loads(body)
+        site = call('sites.create', {'domain': 'binary-http.example.com'})['id']
+        content = bytes(range(256)) * 1100
+        info = {'site_id': site, 'path': 'transfer.bin', 'bytes': len(content),
+                'sha256': hashlib.sha256(content).hexdigest()}
+        self.assertEqual(self.request('POST', '/api', {'method': 'files.upload.start',
+            'data': info}, {'Cookie': cookie})[0], 403)
+        ticket = call('files.upload.start', info)
+        for offset in range(0, len(content), ticket['chunk_bytes']):
+            call('files.upload.chunk', {'site_id': site, 'id': ticket['id'], 'offset': offset,
+                'base64': base64.b64encode(content[offset:offset + ticket['chunk_bytes']]).decode()})
+        call('files.upload.finish', {'site_id': site, 'id': ticket['id']})
+        downloaded = call('files.describe', {'site_id': site, 'path': 'transfer.bin'})
+        parts = []
+        for offset in range(0, len(content), downloaded['chunk_bytes']):
+            part = call('files.chunk', {'site_id': site, 'path': 'transfer.bin',
+                'revision': downloaded['revision'], 'offset': offset})
+            parts.append(base64.b64decode(part['base64']))
+        self.assertEqual(b''.join(parts), content)
 
     def test_cookie_is_http_only_and_strict_and_logout_revokes_it(self):
         cookie, csrf, headers = self.login()
