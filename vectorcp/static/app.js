@@ -15,7 +15,7 @@ const featureNames={php:'PHP',wordpress:'WordPress',databases:'Databases',tls:'H
 let state = {plans:[],pool:null,dns:null,page:'overview', overview:null, sites:[], accounts:[], events:[], backups:[], jobs:[], databases:[], csrf:'', siteId:null, folder:'', file:null, revision:null};
 let setupToken = new URLSearchParams(location.hash.slice(1)).get('setup') || '';
 if(location.hash) history.replaceState(null,'',location.pathname);
-let toastTimer, toolQuery='', navigationBusy=false, pageRequest=0;
+let toastTimer, toolQuery='', navigationBusy=false, pageRequest=0, transferBusy=false;
 const workspaceName=()=>({admin:'Server administration',reseller:'Reseller management',customer:'Hosting workspace'}[state.overview?.user.role]||'Hosting workspace');
 function toolGroups(){
   const groups=[];
@@ -30,7 +30,7 @@ function toolGroups(){
     ['dns','DNS zone editor','Validate and export a private DNS preview.','records nameserver zone ttl txt'],
     ['hosting','HTTPS certificates','Issue a domain certificate for an isolated website.','ssl tls acme certificate']]},
   {title:'Files & backups',icon:'files',tools:[
-    ['files','File manager','Browse folders and edit website text files.','editor directory storage'],
+    ['files','File manager','Transfer, find and manage website files.','editor directory upload copy move rename search storage'],
     ['backups','Backup & restore','Create, download and restore local recovery points.','recovery export download']]},
   {title:'Applications & databases',icon:'server',tools:[
     ['hosting','WordPress installer','Install WordPress on a fresh isolated website.','wordpress cms install'],
@@ -132,7 +132,7 @@ function render(){
     const d=state.dns;
     html=heading('DNS zones','Create, validate and export the records for a website.')+`<div class="callout"><strong>Private DNS preview</strong>These zones are validated by the server’s authoritative DNS service. This service currently listens only inside the VPS. Editing here does not change public DNS. Continue using your current DNS provider until public nameservers are configured.</div><section class="panel"><div class="file-toolbar"><label for="site-choice">Website</label><select id="site-choice">${siteOptions()}</select></div>${d?`<div class="panel-body"><h2>${e(d.domain)}</h2>${!d.can_edit?'<p class="note-line">DNS editing is not included in this customer’s hosting plan.</p>':''}${d.zone?`<div class="heading-actions">${d.can_edit?actionButton('new-dns','Add record'):''}${actionButton('export-dns','Export zone','secondary','download')}${d.can_edit?actionButton('verify-dns','Check ownership','secondary','check'):''}</div><p class="note-line">To verify ownership, add a TXT record named <strong>_vectorcp.${e(d.domain)}</strong> at your current public DNS provider with this value:</p><code class="dns-token">${e(d.zone.challenge)}</code><p>${d.zone.verified?'Ownership verified at the last check.':'Public ownership has not been verified.'}${d.zone.checked?' Checked '+e(date(d.zone.checked))+'.':''}</p><p class="small muted">Private zone serial ${d.zone.serial}. Exported SOA and nameserver records describe this preview; use your provider’s required nameservers when importing.</p>`:d.can_edit?actionButton('create-dns','Create private zone'):''}</div>${d.zone?`<div class="table-wrap"><table><thead><tr><th>Name</th><th>Type</th><th>Value</th><th>TTL</th><th></th></tr></thead><tbody>${d.records.map(r=>`<tr><td>${e(r.name)}</td><td>${e(r.type)}</td><td class="dns-value">${e(r.value)}</td><td>${r.ttl}</td><td>${d.can_edit?`<button class="quiet" data-action="delete-dns" data-id="${r.id}">Delete</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:''}`:empty('Choose a website.','DNS zones belong to an existing website.','','sites')}</section>`;
   }else if(state.page==='files'){
-    html=heading('File manager','Browse folders and edit UTF-8 text files, up to 256 KB each.')+`<section class="panel"><div class="file-toolbar"><label for="site-choice" class="small muted">Website</label><select id="site-choice" aria-label="Website">${state.sites.map(s=>`<option value="${s.id}" ${s.id===state.siteId?'selected':''}>${e(s.domain)}</option>`).join('')}</select><span class="file-path">/public/${e(state.folder)}</span><span class="spacer"></span>${actionButton('new-folder','Folder','secondary','files')}${actionButton('new-file','File','secondary','plus')}</div><div class="file-grid"><div class="file-list" id="file-list"><p class="note-line" role="status">Loading files…</p></div><div class="editor" id="editor">${empty('Pick a file to begin.','Your changes are checked against the version you opened.','','file')}</div></div></section>`;
+    html=heading('File manager','Manage website files. Transfers and file copies support up to 32 MB; the text editor supports 256 KB.')+`<section class="panel"><div class="file-toolbar"><label for="site-choice" class="small muted">Website</label><select id="site-choice" aria-label="Website">${state.sites.map(s=>`<option value="${s.id}" ${s.id===state.siteId?'selected':''}>${e(s.domain)}</option>`).join('')}</select><span class="file-path">/public/${e(state.folder)}</span><span class="spacer"></span>${actionButton('new-folder','Folder','secondary','files')}${actionButton('new-file','File','secondary','plus')}${actionButton('upload-file','Upload','primary','up')}</div><form class="file-search" data-form="file-search"><label for="file-query">Find by name</label><input id="file-query" name="query" value="${e(state.fileSearch||'')}" maxlength="100" placeholder="Search this website"><button class="secondary" type="submit">Search</button><button class="quiet" type="button" data-action="clear-file-search">Clear</button><p class="form-error" role="alert"></p></form><div class="file-grid"><div class="file-list" id="file-list"><p class="note-line" role="status">Loading files…</p></div><div class="editor" id="editor">${empty('Pick a file to begin.','Your changes are checked against the version you opened.','','file')}</div></div></section>`;
   }else if(state.page==='hosting'){
     const site=state.sites.find(s=>s.id===state.siteId);
     const included=state.accounts.find(a=>a.id===site?.user_id)?.features||o.features;
@@ -171,7 +171,7 @@ async function loadPage(page=state.page){
     const siteId=sites.sites.some(s=>s.id===state.siteId)?state.siteId:sites.sites[0]?.id||null;
     const dns=page==='dns'&&siteId?await api('dns.list',{site_id:siteId}):null;
     if(request!==pageRequest)return;
-    if(siteId!==state.siteId){state.folder='';state.file=null;}
+    if(siteId!==state.siteId){state.folder='';state.file=null;state.fileSearch='';}
     Object.assign(state,{page,overview:o,sites:sites.sites,events:events.events,accounts:accounts.accounts,plans:plans.plans,pool:plans.pool,jobs:jobs.jobs,dns,siteId});
     if(backups)state.backups=backups.backups;
     history.replaceState(null,'','/'+o.user.role);
@@ -181,12 +181,12 @@ async function loadPage(page=state.page){
 async function loadFiles(){
   const list=document.querySelector('#file-list');if(!list)return;
   if(!state.siteId){list.innerHTML=empty('No websites yet.','Add a website before editing files.','','files');return;}
-  const siteId=state.siteId,folder=state.folder;list.setAttribute('aria-busy','true');
+  const siteId=state.siteId,folder=state.folder,query=state.fileSearch||'';list.setAttribute('aria-busy','true');
   try{
-    const result=await api('files.list',{site_id:siteId,path:folder});
-    if(!list.isConnected||siteId!==state.siteId||folder!==state.folder)return;
-    list.innerHTML=(folder?`<button class="file-row" data-action="folder-up">${icon('up')}Parent folder</button>`:'')+result.files.map(f=>`<button class="file-row" data-action="${f.directory?'open-folder':'open-file'}" data-name="${e(f.name)}">${icon(f.directory?'files':'file')}${e(f.name)}<small>${f.directory?'':bytes(f.bytes)}</small></button>`).join('');
-    if(!result.files.length)list.innerHTML+=empty('Nothing here yet.','Add a text file or folder.','','files');
+    const result=await api(query?'files.search':'files.list',query?{site_id:siteId,query}:{site_id:siteId,path:folder});
+    if(!list.isConnected||siteId!==state.siteId||folder!==state.folder||query!==(state.fileSearch||''))return;
+    list.innerHTML=(folder&&!query?`<button class="file-row" data-action="folder-up">${icon('up')}Parent folder</button>`:'')+result.files.map(f=>{const path=f.path||[folder,f.name].filter(Boolean).join('/');return `<div class="file-entry"><button class="file-row" data-action="${f.directory?'open-folder':'open-file'}" data-path="${e(path)}">${icon(f.directory?'files':'file')}<span>${e(f.path||f.name)}</span><small>${f.directory?'Folder':bytes(f.bytes)}</small></button><button class="quiet file-actions" data-action="file-actions" data-path="${e(path)}" data-revision="${e(f.revision)}" data-directory="${f.directory}" aria-label="Actions for ${e(f.path||f.name)}">Actions</button></div>`;}).join('')+(result.limited?'<p class="note-line">Showing the first 200 matches or 12,000 scanned entries. Narrow your search.</p>':'');
+    if(!result.files.length)list.innerHTML+=empty(query?'No matching files.':'Nothing here yet.',query?'Try another name. Hidden files are excluded.':'Upload a file or add a folder.','','files');
   }catch(err){if(list.isConnected)list.innerHTML=empty('Files could not be loaded.',e(err.message),actionButton('refresh','Try again','secondary','refresh'),'files');throw err;}
   finally{list.removeAttribute('aria-busy');}
 }
@@ -204,6 +204,23 @@ function editFile(name,content,revision){
   el.innerHTML=`<div class="editor-heading"><span class="mono">${e(name)}</span><button class="primary" data-action="save-file">Save changes ${icon('check')}</button></div><textarea id="file-content" aria-label="File contents" spellcheck="false"></textarea><span class="small muted">Text editor · UTF-8 · maximum 256 KB. File changes are written atomically.</span>`;
   document.querySelector('#file-content').value=content;
 }
+const sha256=async data=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',data))].map(n=>n.toString(16).padStart(2,'0')).join('');
+function base64Bytes(data){let value='';for(let i=0;i<data.length;i+=8192)value+=String.fromCharCode(...data.subarray(i,i+8192));return btoa(value);}
+function saveDownload(blob,name){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+async function downloadFile(siteId,path){
+  if(!crypto.subtle)throw new Error('File verification requires HTTPS or a local SSH tunnel.');
+  const info=await api('files.describe',{site_id:siteId,path}),parts=[];let offset=0;
+  while(offset<info.bytes){
+    const chunk=await api('files.chunk',{site_id:siteId,path,revision:info.revision,offset});
+    if(chunk.next<=offset)throw new Error('The download stopped before it finished. Please retry.');
+    const value=atob(chunk.base64);parts.push(Uint8Array.from(value,c=>c.charCodeAt(0)));offset=chunk.next;
+    notify(`Downloading ${path.split('/').pop()}: ${Math.round(offset/Math.max(info.bytes,1)*100)}%`);
+  }
+  const blob=new Blob(parts,{type:'application/octet-stream'});
+  if(await sha256(await blob.arrayBuffer())!==info.sha256)throw new Error('Download verification failed. Please retry.');
+  saveDownload(blob,path.split('/').pop());notify('File downloaded and checksum verified.');
+}
+modal.addEventListener('cancel',event=>{if(transferBusy){event.preventDefault();return;}const form=modal.querySelector('form');if(form?.dataset.uploadId)api('files.upload.cancel',{site_id:Number(form.dataset.siteId),id:form.dataset.uploadId}).catch(()=>{});});
 document.addEventListener('click',async event=>{
   const button=event.target.closest('button');if(!button)return;
   try{
@@ -214,7 +231,7 @@ document.addEventListener('click',async event=>{
     if(action==='toggle-group'){const body=document.getElementById(button.getAttribute('aria-controls'));body.hidden=!body.hidden;button.setAttribute('aria-expanded',String(!body.hidden));return;}
     if(action==='clear-search'){toolQuery='';document.querySelector('#tool-search').value='';document.querySelectorAll('.tool-grid').forEach(g=>g.hidden=false);document.querySelectorAll('.group-toggle').forEach(b=>b.setAttribute('aria-expanded','true'));filterTools();return;}
     if(action==='auth-toggle'){auth(button.dataset.setup==='true');return;}
-    if(action==='close-modal'){modal.close();return;}
+    if(action==='close-modal'){if(transferBusy){notify('Wait for the current transfer request to finish.');return;}const form=modal.querySelector('form');if(form?.dataset.uploadId)api('files.upload.cancel',{site_id:Number(form.dataset.siteId),id:form.dataset.uploadId}).catch(()=>{});modal.close();return;}
     if(action==='refresh'){await loadPage();notify('Workspace refreshed.');return;}
     if(action==='logout'){await api('logout');auth();return;}
     if(action==='new-site'){
@@ -267,12 +284,31 @@ document.addEventListener('click',async event=>{
     }
     if(action==='toggle-site'){button.disabled=true;await api('sites.active',{site_id:Number(button.dataset.id),active:button.dataset.active==='true'});await loadPage();notify('Website state updated.');return;}
     if(action==='toggle-account'){button.disabled=true;await api('accounts.active',{id:Number(button.dataset.id),active:button.dataset.active==='true'});await loadPage();notify('Customer panel access updated.');return;}
-    if(action==='open-files'){state.siteId=Number(button.dataset.id);state.folder='';state.file=null;await loadPage('files');return;}
+    if(action==='open-files'){state.siteId=Number(button.dataset.id);state.folder='';state.file=null;state.fileSearch='';await loadPage('files');return;}
     if(action==='go-files'){await loadPage('files');return;}
     if(action==='go-backups'){await loadPage('backups');return;}
-    if(action==='open-folder'){state.folder=[state.folder,button.dataset.name].filter(Boolean).join('/');state.file=null;render();return;}
-    if(action==='folder-up'){state.folder=state.folder.split('/').slice(0,-1).join('/');state.file=null;render();return;}
-    if(action==='open-file'){const name=[state.folder,button.dataset.name].filter(Boolean).join('/');const result=await api('files.read',{site_id:state.siteId,path:name});editFile(name,result.content,result.revision);return;}
+    if(action==='open-folder'){state.folder=button.dataset.path;state.file=null;state.fileSearch='';render();return;}
+    if(action==='folder-up'){state.folder=state.folder.split('/').slice(0,-1).join('/');state.file=null;state.fileSearch='';render();return;}
+    if(action==='open-file'){const name=button.dataset.path,siteId=state.siteId;const result=await api('files.read',{site_id:siteId,path:name});if(state.page==='files'&&state.siteId===siteId)editFile(name,result.content,result.revision);return;}
+    if(action==='clear-file-search'){state.fileSearch='';document.querySelector('#file-query').value='';await loadFiles();return;}
+    if(action==='upload-file'){
+      if(!state.siteId){notify('Add a website first.',true);return;}
+      showModal('Upload a file','Maximum 32 MB. Existing files are preserved; use a new name to upload another version.','upload-file',`<input type="hidden" name="site_id" value="${state.siteId}"><input type="hidden" name="folder" value="${e(state.folder)}"><div class="field"><label for="upload-file-input">File</label><input id="upload-file-input" type="file" name="upload_file" required></div><p id="upload-progress" role="status" aria-live="polite"></p>`,'Upload');return;
+    }
+    if(action==='file-actions'){
+      const path=button.dataset.path,directory=button.dataset.directory==='true';
+      const attributes=`data-path="${e(path)}" data-revision="${e(button.dataset.revision)}" data-site-id="${state.siteId}"`;
+      showModal('File actions',e('/public/'+path),'close-details',`<p>${directory?'Folder: moves include its contents. Removal requires an empty folder.':'Regular file: copies and downloads support up to 32 MB.'}</p><div class="file-operation-list">${directory?'':`<button type="button" class="secondary" data-action="file-edit" ${attributes}>Edit text</button><button type="button" class="secondary" data-action="file-download" ${attributes}>Download</button><button type="button" class="secondary" data-action="file-copy" ${attributes}>Copy</button>`}<button type="button" class="secondary" data-action="file-move" ${attributes}>Move / rename</button><button type="button" class="danger" data-action="file-remove" ${attributes}>Remove</button></div>`,'Close');return;
+    }
+    if(action==='file-edit'){
+      const path=button.dataset.path,siteId=Number(button.dataset.siteId),result=await api('files.read',{site_id:siteId,path});modal.close();if(state.page==='files'&&state.siteId===siteId)editFile(path,result.content,result.revision);return;
+    }
+    if(action==='file-download'){button.disabled=true;await downloadFile(Number(button.dataset.siteId),button.dataset.path);return;}
+    if(['file-copy','file-move','file-remove'].includes(action)){
+      const path=button.dataset.path,kind=action.slice(5);modal.close();
+      showModal(kind==='remove'?'Permanently remove this item?':kind==='copy'?'Copy file':'Move / rename',kind==='remove'?`Remove /public/${e(path)}? This cannot be undone. Keep a backup first.`:'Destinations are relative to this website’s public folder. Existing items are never overwritten.','file-operation',`<input type="hidden" name="site_id" value="${Number(button.dataset.siteId)}"><input type="hidden" name="path" value="${e(path)}"><input type="hidden" name="revision" value="${e(button.dataset.revision)}"><input type="hidden" name="operation" value="${kind}">${kind==='remove'?field('Type REMOVE to confirm','confirm',{attrs:'pattern="REMOVE" autocomplete="off"'}):field('Destination path','destination',{value:path,attrs:'maxlength="512"',help:'For example, assets/logo.png. The destination folder must already exist.'})}`,kind==='remove'?'Remove permanently':kind==='copy'?'Copy file':'Move item');
+      if(kind==='remove')modal.querySelector('button[type="submit"]').className='danger';return;
+    }
     if(action==='new-file'||action==='new-folder'){
       if(!state.siteId){notify('Add a website first.',true);return;}
       showModal(action==='new-file'?'Create file':'Create folder','Created inside the current website folder.',action==='new-file'?'file':'folder',field('Name','name',{attrs:'maxlength="200"',help:action==='new-file'?'For example, about.html or style.css.':'For example, assets.'}),'Create');return;
@@ -306,16 +342,39 @@ matchMedia('(max-width: 760px)').addEventListener('change',()=>setNavigation(fal
 document.addEventListener('change',event=>{
   if(event.target.id==='account-role')document.querySelector('#account-plan').innerHTML=planOptions(event.target.value);
   if(event.target.id==='plan-kind'){const reseller=event.target.value==='reseller';document.querySelector('#reseller-count').hidden=!reseller;document.querySelector('[name="site_limit"]').max=reseller?1000:100;document.querySelector('[name="storage_mb"]').max=reseller?16384:4096;}
-  if(event.target.id==='site-choice'){state.siteId=Number(event.target.value);state.folder='';state.file=null;if(state.page==='dns')loadPage().catch(err=>notify(err.message,true));else render();}
+  if(event.target.id==='site-choice'){state.siteId=Number(event.target.value);state.folder='';state.file=null;state.fileSearch='';if(state.page==='dns')loadPage().catch(err=>notify(err.message,true));else render();}
 });
 document.addEventListener('submit',async event=>{
   const form=event.target.closest('form[data-form]');if(!form)return;event.preventDefault();
   if(form.dataset.form==='tool-search'){try{toolQuery=form.elements.query.value;if(state.page!=='overview'){await loadPage('overview');focusPage();}else filterTools();}catch(err){notify(err.message,true);}return;}
+  if(form.dataset.form==='file-search'){state.fileSearch=form.elements.query.value.trim();form.querySelector('.form-error').textContent='';try{await loadFiles();}catch(err){form.querySelector('.form-error').textContent=err.message;}return;}
   const button=form.querySelector('button[type="submit"]');button.disabled=true;form.querySelector('.form-error').textContent='';
   try{
     const data=Object.fromEntries(new FormData(form));const kind=form.dataset.form;
     if(kind==='login'||kind==='bootstrap'){if(kind==='login'&&['/admin','/reseller','/customer'].includes(location.pathname))data.entry=location.pathname.slice(1);const result=await api(kind,data);state.csrf=result.csrf;setupToken='';await loadPage('overview');return;}
     if(kind==='close-details'){modal.close();return;}
+    if(kind==='file-operation'){
+      if(data.operation==='remove'&&data.confirm!=='REMOVE')throw new Error('Type REMOVE to confirm.');
+      data.site_id=Number(data.site_id);await api('files.'+data.operation,data);modal.close();state.file=null;if(state.siteId===data.site_id){document.querySelector('#editor').innerHTML=empty('Pick a file to begin.','File operation completed.','','file');await loadFiles();}notify('File operation completed.');return;
+    }
+    if(kind==='upload-file'){
+      const file=form.elements.upload_file.files[0],siteId=Number(data.site_id),progress=form.querySelector('#upload-progress');
+      if(!file||file.size>33554432)throw new Error('Choose a file up to 32 MB.');
+      if(!crypto.subtle)throw new Error('File verification requires HTTPS or a local SSH tunnel.');
+      transferBusy=true;form.querySelector('input[type="file"]').disabled=true;
+      try{
+        progress.textContent='Checking file…';const buffer=new Uint8Array(await file.arrayBuffer()),checksum=await sha256(buffer);
+        const path=[data.folder,file.name].filter(Boolean).join('/');form.dataset.siteId=String(siteId);
+        if(form.dataset.uploadId&&form.dataset.checksum!==checksum){await api('files.upload.cancel',{site_id:siteId,id:form.dataset.uploadId});delete form.dataset.uploadId;}
+        let ticket;
+        if(form.dataset.uploadId){try{ticket=await api('files.upload.status',{site_id:siteId,id:form.dataset.uploadId});}catch(err){if(err.status!==404)throw err;delete form.dataset.uploadId;}}
+        if(!ticket){ticket=await api('files.upload.start',{site_id:siteId,path,bytes:file.size,sha256:checksum});form.dataset.uploadId=ticket.id;form.dataset.checksum=checksum;}
+        let offset=ticket.received;
+        while(offset<file.size){const chunk=buffer.subarray(offset,offset+ticket.chunk_bytes);const result=await api('files.upload.chunk',{site_id:siteId,id:ticket.id,offset,base64:base64Bytes(chunk)});if(result.received<=offset)throw new Error('The upload did not advance. Please retry.');offset=result.received;progress.textContent=`Uploading: ${Math.round(offset/Math.max(file.size,1)*100)}%`;}
+        progress.textContent='Verifying and publishing…';await api('files.upload.finish',{site_id:siteId,id:ticket.id});delete form.dataset.uploadId;modal.close();if(state.page==='files'&&state.siteId===siteId)await loadFiles();notify('File uploaded and checksum verified.');
+      }finally{transferBusy=false;form.querySelector('input[type="file"]').disabled=false;}
+      return;
+    }
     if(['hosting-enable','wordpress','full-backup','restore','delete-backup'].includes(kind)){
       const method={'hosting-enable':'hosting.enable','wordpress':'hosting.wordpress','full-backup':'backups.full','restore':'backups.restore','delete-backup':'backups.delete'}[kind];
       if(kind==='hosting-enable'){data.id=Number(data.id);data.storage_mb=Number(data.storage_mb);}
