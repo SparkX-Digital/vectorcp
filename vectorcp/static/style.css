@@ -91,6 +91,8 @@ hr { border:0; border-top:1px solid var(--line); margin:20px 0; }
 .tool-search .icon-button { min-height:40px; height:40px; width:40px; }
 .top-actions { display:flex; align-items:center; gap:4px; }
 .content { padding:24px; max-width:1800px; margin:auto; }
+.page-loading { padding:12px 24px; color:var(--green); background:#edf4ef; border-bottom:1px solid #d1dfd6; font-size:14px; }
+#page[aria-busy="true"] { opacity:.55; }
 .development-banner { display:flex; align-items:center; gap:10px; background:#fff8e7; color:#785718; font-size:12px; border-bottom:1px solid #e6d6ae; padding:8px 24px; }
 .development-banner .icon { width:16px; height:16px; }
 .page-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin:0 0 24px; }
