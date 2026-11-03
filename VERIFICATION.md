@@ -1,3 +1,25 @@
+# VectorCP 0.4.1 interface snapshot verification
+
+All 56 existing tests passed locally on Python 3.13 in 42.998 seconds during
+the interface change. No hosting, authentication, database schema or privileged
+operation implementation changed. JavaScript syntax passed.
+
+The actual local application was exercised with owner, reseller and customer
+sessions at a 463 px phone viewport. Every implemented page was opened; working
+entry points, tool search, mobile navigation, Escape/focus behavior, table labels
+and form dialogs were checked. Seventy-eight private rendered-markup checks passed across 320, 390, 463, 768,
+1280 and 1920 CSS pixels: no document overflow or undersized buttons. They cover
+ten owner pages, reseller/customer tool directories and a customer editor.
+These are layout checks, not service integrations. Native phone checks also
+covered ten form dialogs, list/no-result filters, a saved/reopened text file and
+an invalid DNS record; the error remained in its dialog without losing input.
+See [INTERFACE.md](INTERFACE.md) for the component contract.
+
+The catalog now contains 253 workflows: 31 Available, 26 Partial and 196 Planned.
+New catalog entries describe work; they do not introduce working services.
+
+## Installation boundary carried forward
+
 # VectorCP 0.4.0 development snapshot verification
 
 The current source uses the VectorCP package, service and storage identifiers.

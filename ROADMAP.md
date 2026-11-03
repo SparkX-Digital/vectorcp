@@ -1,7 +1,7 @@
 # VectorCP roadmap
 
 VectorCP aims to become a complete open-source hosting control panel for server
-owners, resellers and customers. The current release is **0.4.0**, an early
+owners, resellers and customers. The current release is **0.4.1**, an early
 development milestone. [FEATURES.md](FEATURES.md) is the detailed capability map;
 [VERIFICATION.md](VERIFICATION.md) records what has actually been exercised.
 [PRODUCT.md](PRODUCT.md) defines the self-hosted product contract and
