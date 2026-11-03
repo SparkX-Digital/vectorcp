@@ -1,0 +1,147 @@
+import http.client
+import json
+from pathlib import Path
+import secrets
+import tempfile
+import threading
+import unittest
+
+from veyra.agent import Server as AgentServer
+from veyra.core import Engine
+from veyra.web import Server as WebServer
+
+
+class HttpBoundaryTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory(prefix="veyra-http-")
+        root = Path(cls.tmp.name)
+        cls.engine = Engine(root / "state", root / "sites", development=True)
+        cls.password = secrets.token_urlsafe(24)
+        cls.engine.bootstrap({"setup_token": cls.engine.setup_token(), "username": "administrator", "name": "Administrator", "password": cls.password})
+        cls.agent = AgentServer(root / "a.sock", cls.engine, 0)
+        threading.Thread(target=cls.agent.serve_forever, daemon=True).start()
+        cls.web = WebServer(("127.0.0.1", 0), root / "a.sock", "http://127.0.0.1", True)
+        cls.port = cls.web.server_address[1]
+        cls.origin = "http://127.0.0.1:%d" % cls.port
+        cls.web.origin = cls.origin
+        threading.Thread(target=cls.web.serve_forever, daemon=True).start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.web.shutdown()
+        cls.web.server_close()
+        cls.agent.shutdown()
+        cls.agent.server_close()
+        cls.tmp.cleanup()
+
+    def request(self, method="GET", path="/", data=None, headers=None):
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+        base = {"Host": "127.0.0.1:%d" % self.port}
+        if method == "POST":
+            base.update({"Origin": self.origin, "Content-Type": "application/json"})
+        base.update(headers or {})
+        connection.request(method, path, body=json.dumps(data) if data is not None else None, headers=base)
+        response = connection.getresponse()
+        result = (response.status, dict(response.getheaders()), response.read())
+        connection.close()
+        return result
+
+    def login(self):
+        status, headers, body = self.request("POST", "/api", {"method": "login", "data": {"username": "administrator", "password": self.password}})
+        self.assertEqual(status, 200)
+        return headers["Set-Cookie"].split(";")[0], json.loads(body)["csrf"], headers
+
+    def test_role_entry_paths_serve_the_application(self):
+        for path in ('/admin','/reseller','/customer'):
+            status, headers, body = self.request(path=path)
+            self.assertEqual(status,200)
+            self.assertIn(b'/app.js',body)
+            self.assertIn("frame-ancestors 'none'",headers['Content-Security-Policy'])
+
+    def test_app_and_assets_have_csp_and_nosniff(self):
+        for path in ("/", "/app.js", "/style.css", "/favicon.svg"):
+            with self.subTest(path=path):
+                status, headers, body = self.request(path=path)
+                self.assertEqual(status, 200)
+                self.assertTrue(body)
+                self.assertIn("frame-ancestors 'none'", headers["Content-Security-Policy"])
+                self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
+
+    def test_private_paths_are_not_static_files(self):
+        self.assertEqual(self.request(path="/../core.py")[0], 404)
+        self.assertEqual(self.request(path="/control.sqlite3")[0], 404)
+
+    def test_cross_origin_requests_are_refused(self):
+        status, _, _ = self.request("POST", "/api", {"method": "login"}, {"Origin": "https://unrelated.example"})
+        self.assertEqual(status, 403)
+
+    def test_dns_rebinding_host_header_is_refused(self):
+        self.assertEqual(self.request(headers={"Host": "unrelated.example"})[0], 400)
+
+    def test_body_token_cannot_substitute_for_an_http_only_session_cookie(self):
+        cookie, csrf, _ = self.login()
+        token = cookie.split("=", 1)[1]
+        status, _, _ = self.request("POST", "/api", {"method": "overview", "token": token, "role": "admin", "csrf": csrf})
+        self.assertEqual(status, 401)
+
+    def test_mutations_require_csrf_even_with_a_valid_cookie(self):
+        cookie, csrf, _ = self.login()
+        payload = {"method": "sites.create", "data": {"domain": "http.example.com"}}
+        self.assertEqual(self.request("POST", "/api", payload, {"Cookie": cookie})[0], 403)
+        self.assertEqual(self.request("POST", "/api", payload, {"Cookie": cookie, "X-CSRF-Token": csrf})[0], 200)
+
+    def test_cookie_is_http_only_and_strict_and_logout_revokes_it(self):
+        cookie, csrf, headers = self.login()
+        self.assertIn("HttpOnly", headers["Set-Cookie"])
+        self.assertIn("SameSite=Strict", headers["Set-Cookie"])
+        status, headers, _ = self.request("POST", "/api", {"method": "logout"}, {"Cookie": cookie, "X-CSRF-Token": csrf})
+        self.assertEqual(status, 200)
+        self.assertIn("Max-Age=0", headers["Set-Cookie"])
+        self.assertEqual(self.request("POST", "/api", {"method": "overview"}, {"Cookie": cookie})[0], 401)
+
+    def test_health_check_reaches_both_processes(self):
+        status, _, body = self.request(path="/healthz")
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["agent"], "ready")
+
+    def test_https_origin_sets_a_secure_http_only_cookie(self):
+        previous = self.web.origin
+        self.web.origin = "https://198.51.100.7"
+        try:
+            status, headers, body = self.request("POST", "/api", {
+                "method": "login", "data": {"username": "administrator", "password": self.password}
+            }, {"Host": "198.51.100.7", "Origin": self.web.origin})
+            self.assertEqual(status, 200)
+            self.assertIn("; Secure", headers["Set-Cookie"])
+            self.assertIn("HttpOnly", headers["Set-Cookie"])
+            self.assertNotIn("token", json.loads(body))
+        finally:
+            self.web.origin = previous
+
+    def test_public_https_origin_refuses_http_and_unrelated_origins(self):
+        previous = self.web.origin
+        self.web.origin = "https://198.51.100.7"
+        try:
+            for origin in ("http://198.51.100.7", "https://unrelated.example"):
+                with self.subTest(origin=origin):
+                    status, _, _ = self.request("POST", "/api", {"method": "login"}, {
+                        "Host": "198.51.100.7", "Origin": origin})
+                    self.assertEqual(status, 403)
+        finally:
+            self.web.origin = previous
+
+    def test_forwarded_headers_cannot_replace_the_expected_public_host(self):
+        previous = self.web.origin
+        self.web.origin = "https://198.51.100.7"
+        try:
+            status, _, _ = self.request(headers={"Host": "unrelated.example",
+                "X-Forwarded-Host": "198.51.100.7", "X-Forwarded-Proto": "https"})
+            self.assertEqual(status, 400)
+            self.assertEqual(self.request(headers={"Host": "198.51.100.7"})[0], 200)
+        finally:
+            self.web.origin = previous
+
+
+if __name__ == "__main__":
+    unittest.main()
