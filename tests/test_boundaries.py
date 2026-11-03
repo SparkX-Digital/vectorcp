@@ -10,12 +10,12 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from veyra.core import Engine, Fault
+from vectorcp.core import Engine, Fault
 
 
 class BoundaryTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory(prefix="veyra-test-")
+        self.tmp = tempfile.TemporaryDirectory(prefix="vectorcp-test-")
         self.root = Path(self.tmp.name)
         self.engine = Engine(self.root / "state", self.root / "sites", development=True)
         self.password = secrets.token_urlsafe(24)
@@ -160,7 +160,7 @@ class BoundaryTests(unittest.TestCase):
         nginx.mkdir()
         self.engine.nginx = nginx
         self.engine.development = False
-        with patch("veyra.core.run_fixed", side_effect=[Fault("Rejected configuration", 503), "", ""]) as command:
+        with patch("vectorcp.core.run_fixed", side_effect=[Fault("Rejected configuration", 503), "", ""]) as command:
             self.refused(503, lambda: self.call(self.alice, "sites.create", {"domain": "failed.example.com"}))
         self.assertEqual(command.call_count, 3)
         self.assertEqual(command.call_args_list[0].args[0], ["/usr/sbin/nginx", "-t"])

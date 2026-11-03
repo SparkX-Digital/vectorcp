@@ -2,8 +2,8 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from veyra.core import Engine, Fault
-from veyra.dns import validate
+from vectorcp.core import Engine, Fault
+from vectorcp.dns import validate
 
 
 class DNSRecords(unittest.TestCase):
