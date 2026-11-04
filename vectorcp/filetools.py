@@ -23,10 +23,13 @@ CHUNK = 256 * 1024
 MAX_FILE = 32 * 1024 * 1024
 STAGING_LIMIT = 64 * 1024 * 1024
 UPLOAD_TTL = 3600
-READ_ONLY = {'files.describe', 'files.chunk', 'files.upload.status', 'files.search'}
+READ_ONLY = {'files.describe', 'files.chunk', 'files.upload.status', 'files.search', 'files.permissions'}
+READ_ONLY |= {'files.trash.list'}
 OPERATIONS = READ_ONLY | {'files.upload.start', 'files.upload.chunk',
                          'files.upload.finish', 'files.upload.cancel',
-                         'files.copy', 'files.move', 'files.remove'}
+                         'files.copy', 'files.move', 'files.remove', 'files.chmod', 'files.batch',
+                         'files.trash', 'files.trash.restore', 'files.trash.purge',
+                         'files.archive.create', 'files.archive.extract'}
 
 
 def revision(st):
@@ -116,6 +119,17 @@ class FileTools:
         if self.e.account_usage(db, site['user_id']) + additional > owner['storage_mb'] * 1024 * 1024:
             raise Fault('This account has reached its file storage limit.', 409)
 
+    def entry_room(self, root, additional):
+        count = 0
+        for area in (root, root.parent / '.vectorcp-trash'):
+            if area.is_symlink():
+                continue
+            for folder, dirs, files in os.walk(area, followlinks=False):
+                count += len(dirs) + len(files)
+                dirs[:] = [d for d in dirs if not os.path.islink(os.path.join(folder, d))]
+        if count + additional > (12000 if self.e.hosting.enabled else 1000):
+            raise Fault('This operation would exceed the website’s file and folder entry limit (including trash).', 409)
+
     def publish(self, db, site, parent, name, stream, size, expected_hash=None):
         self.e.check_entry_limit(self.e.site_root(site))
         self.quota(db, site, size)
@@ -155,17 +169,175 @@ class FileTools:
                 raise Fault('Storage is full. No destination file was replaced.', 409)
             raise Fault('The file operation could not be completed. Refresh the folder.', 409)
 
+    def tree(self, root, source):
+        """Snapshot a bounded regular-file tree, never following links or special files."""
+        entries, total = [], 0
+        def walk(fd, prefix='', depth=0):
+            nonlocal total
+            if depth > 32:
+                raise Fault('Folder operations support at most 32 nested levels.')
+            for name in sorted(os.listdir(fd)):
+                if not self.e.file_name(name, True):
+                    raise Fault('The folder contains an unsupported filename. Rename it before copying.')
+                st = os.stat(name, dir_fd=fd, follow_symlinks=False)
+                if not (stat.S_ISDIR(st.st_mode) or stat.S_ISREG(st.st_mode)):
+                    raise Fault('The folder contains a link or special file. Remove it from the selection.')
+                path = prefix + name
+                if len(source + '/' + path) > 512:
+                    raise Fault('A nested file path is too long.')
+                entries.append((path, stat.S_ISDIR(st.st_mode), revision(st), st.st_size))
+                if len(entries) > 1000:
+                    raise Fault('Folder operations support at most 1,000 entries.')
+                if stat.S_ISREG(st.st_mode):
+                    total += st.st_size
+                    if total > MAX_FILE:
+                        raise Fault('Folder operations support at most 32 MB of file content.')
+                else:
+                    child = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+                    try:
+                        walk(child, path + '/', depth + 1)
+                    finally:
+                        os.close(child)
+        with self.e.directory(root, source, True) as fd:
+            initial = revision(os.fstat(fd))
+            walk(fd)
+            if revision(os.fstat(fd)) != initial:
+                raise Fault('The source folder changed. Refresh and try again.', 409)
+        return entries, total, initial
+
+    def remove_tree(self, parent, name):
+        """Remove only our private temporary tree, using descriptors throughout."""
+        fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
+        try:
+            for child in os.listdir(fd):
+                st = os.stat(child, dir_fd=fd, follow_symlinks=False)
+                if stat.S_ISDIR(st.st_mode):
+                    self.remove_tree(fd, child)
+                else:
+                    os.unlink(child, dir_fd=fd)
+        finally:
+            os.close(fd)
+        os.rmdir(name, dir_fd=parent)
+
+    def copy_tree(self, db, site, data):
+        root, source = self.e.site_root(site), data['path']
+        target = data.get('destination')
+        target_folder, target_name = self.e.file_parts(target, data.get('show_hidden', False))
+        if target == source or target.startswith(source + '/'):
+            raise Fault('Choose a destination outside the selected folder.')
+        entries, size, initial = self.tree(root, source)
+        if initial != data.get('revision'):
+            raise Fault('The source folder changed. Refresh and try again.', 409)
+        self.quota(db, site, size)
+        self.entry_room(root, len(entries) + 1)
+        with self.e.directory(root, target_folder, True) as destination, self.e.directory(root.parent) as staging_parent:
+            for name in os.listdir(staging_parent):
+                if re.fullmatch(r'\.vectorcp-copy-[0-9a-f]{32}', name):
+                    self.remove_tree(staging_parent, name)
+            temporary = '.vectorcp-copy-' + secrets.token_hex(16)
+            os.mkdir(temporary, 0o700, dir_fd=staging_parent)
+            stage = os.open(temporary, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=staging_parent)
+            try:
+                # Stage under a root-only directory on the destination filesystem.
+                # The destination remains absent until every file has been checked.
+                for path, is_dir, expected, length in entries:
+                    folder, _, name = path.rpartition('/')
+                    target_parent = os.dup(stage)
+                    try:
+                        for part in folder.split('/') if folder else []:
+                            child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=target_parent)
+                            os.close(target_parent)
+                            target_parent = child
+                        if is_dir:
+                            os.mkdir(name, 0o700, dir_fd=target_parent)
+                        else:
+                            with self.e.directory(root, source + ('/' + folder if folder else ''), True) as parent:
+                                with self.regular(parent, name) as (stream, st):
+                                    if revision(st) != expected:
+                                        raise Fault('A source file changed. Refresh and try again.', 409)
+                                    self.publish(db, site, target_parent, name, stream, length)
+                                    if revision(os.fstat(stream.fileno())) != expected:
+                                        raise Fault('A source file changed during the copy.', 409)
+                    finally:
+                        os.close(target_parent)
+                if self.tree(root, source) != (entries, size, initial):
+                    raise Fault('The source folder changed during the copy.', 409)
+                # Normalize directory ownership only after all source checks pass.
+                for path, is_dir, _, _ in reversed(entries):
+                    if is_dir:
+                        folder, _, name = path.rpartition('/')
+                        parent = os.dup(stage)
+                        try:
+                            for part in folder.split('/') if folder else []:
+                                child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
+                                os.close(parent)
+                                parent = child
+                            os.chmod(name, 0o755, dir_fd=parent, follow_symlinks=False)
+                            self.e.file_owner(db, site, parent, name, directory=True)
+                        finally:
+                            os.close(parent)
+                os.fchmod(stage, 0o755)
+                self.e.file_owner(db, site, staging_parent, temporary, directory=True)
+                self.quota(db, site, size)
+                self.entry_room(root, len(entries) + 1)
+                os.fsync(stage)
+                rename_new(staging_parent, temporary, destination, target_name)
+                os.fsync(destination)
+            finally:
+                os.close(stage)
+                with contextlib.suppress(FileNotFoundError):
+                    self.remove_tree(staging_parent, temporary)
+        return {'ok': True, 'entries': len(entries) + 1, 'bytes': size}
+
     def operation(self, db, actor, site, method, data):
         root = self.e.site_root(site)
+        hidden = data.get('show_hidden', False)
+        if not isinstance(hidden, bool):
+            raise Fault('Invalid hidden-file preference.')
+        parts = lambda value: self.e.file_parts(value, hidden)
+        directory = lambda path, relative='': self.e.directory(path, relative, hidden)
+        if method in {'files.trash', 'files.trash.list', 'files.trash.restore', 'files.trash.purge'}:
+            return self.e.trash.dispatch(db, actor, site, method, data)
+        if method in {'files.archive.create', 'files.archive.extract'}:
+            return self.e.archives.dispatch(db, actor, site, method, data)
+        if method == 'files.batch':
+            items = data.get('items')
+            operation = data.get('operation')
+            if operation not in ('copy', 'move', 'remove') or not isinstance(items, list) or not 1 <= len(items) <= 20:
+                raise Fault('Choose an operation and between 1 and 20 items.')
+            paths = []
+            for item in items:
+                if not isinstance(item, dict):
+                    raise Fault('Invalid selected item.')
+                parts(item.get('path'))
+                if item['path'] in paths or any(item['path'].startswith(p + '/') or p.startswith(item['path'] + '/') for p in paths):
+                    raise Fault('Select different items without also selecting a parent folder.')
+                paths.append(item['path'])
+            destination = data.get('destination', '')
+            if operation != 'remove':
+                with directory(root, destination):
+                    pass
+            results = []
+            for item in items:
+                values = dict(item, show_hidden=hidden)
+                if operation != 'remove':
+                    values['destination'] = '/'.join(filter(None, [destination, item['path'].rsplit('/', 1)[-1]]))
+                try:
+                    with db:  # Keep completed results even if a later item fails.
+                        self.dispatch(db, actor, site, 'files.' + operation, values)
+                    results.append({'path': item['path'], 'ok': True})
+                except Fault as error:
+                    results.append({'path': item['path'], 'ok': False, 'error': str(error), 'status': error.status})
+            return {'results': results, 'ok': all(r['ok'] for r in results)}
         if method == 'files.upload.start':
             self.expire(db)
             size = integer(data.get('bytes'), 'file size', 0, MAX_FILE)
             checksum = data.get('sha256')
             if not isinstance(checksum, str) or not re.fullmatch(r'[0-9a-f]{64}', checksum):
                 raise Fault('A SHA-256 checksum is required.')
-            path = text(data.get('path'), 'file path', 512)
-            folder, name = self.e.file_parts(path)
-            with self.e.directory(root, folder) as parent:
+            path = data.get('path')
+            folder, name = parts(path)
+            with directory(root, folder) as parent:
                 try:
                     os.stat(name, dir_fd=parent, follow_symlinks=False)
                 except FileNotFoundError:
@@ -228,8 +400,8 @@ class FileTools:
                 return {'received': received}
             if row['received'] != row['bytes']:
                 raise Fault('The upload is incomplete.', 409)
-            folder, name = self.e.file_parts(row['path'])
-            with self.e.directory(root, folder) as parent, self.regular(None, self.staging / row['id']) as (stream, st):
+            folder, name = parts(row['path'])
+            with directory(root, folder) as parent, self.regular(None, self.staging / row['id']) as (stream, st):
                 checksum = self.publish(db, site, parent, name, stream, row['bytes'], row['sha256'])
             # Retain a short-lived completion receipt for a lost HTTP response.
             (self.staging / row['id']).unlink(missing_ok=True)
@@ -242,7 +414,7 @@ class FileTools:
             def walk(parent, prefix=''):
                 nonlocal scanned
                 for name in sorted(os.listdir(parent)):
-                    if name.startswith('.'):
+                    if not self.e.file_name(name, hidden):
                         continue
                     scanned += 1
                     if scanned > 12000 or len(matches) >= 200:
@@ -263,11 +435,42 @@ class FileTools:
                                 os.close(child)
                     except (FileNotFoundError, NotADirectoryError):
                         continue
-            with self.e.directory(root) as parent:
+            with directory(root) as parent:
                 walk(parent)
             return {'files': matches, 'limited': scanned > 12000 or len(matches) >= 200}
-        folder, name = self.e.file_parts(data.get('path'))
-        with self.e.directory(root, folder) as parent:
+        folder, name = parts(data.get('path'))
+        with directory(root, folder) as parent:
+            if method == 'files.copy' and stat.S_ISDIR(os.stat(name, dir_fd=parent, follow_symlinks=False).st_mode):
+                result = self.copy_tree(db, site, data)
+                self.e.log(db, actor, 'folder.copied', site['domain'] + '/' + data['path'])
+                return result
+            if method in ('files.permissions', 'files.chmod'):
+                fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=parent)
+                try:
+                    st = os.fstat(fd)
+                    if not (stat.S_ISREG(st.st_mode) or stat.S_ISDIR(st.st_mode)):
+                        raise Fault('Only regular files and folders have editable permissions.')
+                    owner = db.execute('SELECT * FROM users WHERE id=?', (site['user_id'],)).fetchone()
+                    choices = ['700', '750', '755'] if stat.S_ISDIR(st.st_mode) else ['600', '640', '644', '700', '750', '755']
+                    if method == 'files.chmod':
+                        mode = data.get('mode')
+                        if mode not in choices:
+                            raise Fault('Choose an allowed permission mode. Shared write and special bits are refused.')
+                        if data.get('revision') != revision(st):
+                            raise Fault('The item changed. Refresh and try again.', 409)
+                        # Ownership can only be normalized to this site's customer;
+                        # the API never accepts a UID/GID or another account.
+                        if owner['hosting_slot'] is not None:
+                            ident = self.e.hosting.identity(self.e.hosting.slot(owner))
+                            os.fchown(fd, ident.pw_uid, ident.pw_gid)
+                        os.fchmod(fd, int(mode, 8))
+                        os.fsync(fd)
+                        self.e.log(db, actor, 'file.permissions_changed', site['domain'] + '/' + data['path'])
+                    final = os.fstat(fd)
+                    return {'mode': format(stat.S_IMODE(final.st_mode), '03o'), 'revision': revision(final),
+                            'choices': choices, 'owner': owner['username'], 'isolated': owner['hosting_slot'] is not None}
+                finally:
+                    os.close(fd)
             if method in ('files.describe', 'files.chunk', 'files.copy'):
                 with self.regular(parent, name) as (stream, st):
                     current = revision(st)
@@ -293,9 +496,9 @@ class FileTools:
                             raise Fault('The file changed. Start the download again.', 409)
                         return {'base64': base64.b64encode(chunk).decode(), 'offset': offset,
                                 'next': offset + len(chunk), 'bytes': st.st_size}
-                    target = text(data.get('destination'), 'destination', 512)
-                    target_folder, target_name = self.e.file_parts(target)
-                    with self.e.directory(root, target_folder) as destination:
+                    target = data.get('destination')
+                    target_folder, target_name = parts(target)
+                    with directory(root, target_folder) as destination:
                         # Hash the source first so changes during the copy are rejected.
                         checksum = hashlib.sha256()
                         for chunk in iter(lambda: stream.read(CHUNK), b''):
@@ -313,11 +516,11 @@ class FileTools:
                 if data.get('revision') != revision(st):
                     raise Fault('The item changed. Refresh and try again.', 409)
                 if method == 'files.move':
-                    target = text(data.get('destination'), 'destination', 512)
-                    target_folder, target_name = self.e.file_parts(target)
+                    target = data.get('destination')
+                    target_folder, target_name = parts(target)
                     if target == data['path'] or target.startswith(data['path'] + '/'):
                         raise Fault('Choose a destination outside the selected folder.')
-                    with self.e.directory(root, target_folder) as destination:
+                    with directory(root, target_folder) as destination:
                         rename_new(parent, name, destination, target_name)
                         os.fsync(destination)
                 elif method == 'files.remove':
