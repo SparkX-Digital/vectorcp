@@ -6,7 +6,9 @@ from pathlib import Path
 import secrets
 import tempfile
 import threading
+import time
 import unittest
+from unittest.mock import patch
 
 from vectorcp.agent import Server as AgentServer
 from vectorcp.core import Engine
@@ -169,6 +171,59 @@ class HttpBoundaryTests(unittest.TestCase):
             self.assertEqual(self.request(headers={"Host": "198.51.100.7"})[0], 200)
         finally:
             self.web.origin = previous
+
+    def test_mfa_http_flow_sets_cookie_only_after_second_factor_and_keeps_it_private(self):
+        from vectorcp.security import totp
+        cookie, csrf, _ = self.login()
+        password = secrets.token_urlsafe(24)
+        headers = {'Cookie': cookie, 'X-CSRF-Token': csrf}
+        status, _, body = self.request('POST', '/api', {'method': 'accounts.create', 'data': {
+            'username': 'mfa_http', 'name': 'MFA HTTP', 'password': password}}, headers)
+        self.assertEqual(status, 200, body)
+        status, login_headers, body = self.request('POST', '/api', {'method': 'login', 'data': {
+            'username': 'mfa_http', 'password': password}}, {'User-Agent': 'Verified browser'})
+        session_cookie = login_headers['Set-Cookie'].split(';')[0]
+        session_headers = {'Cookie': session_cookie, 'X-CSRF-Token': json.loads(body)['csrf']}
+        status, _, body = self.request('POST', '/api', {'method': 'security.enroll', 'data': {'password': password}}, session_headers)
+        self.assertEqual(status, 200, body)
+        secret = json.loads(body)['secret']
+        step = int(time.time())//30
+        with patch('time.time', return_value=step*30+3):
+            status, _, body = self.request('POST', '/api', {'method': 'security.confirm', 'data': {
+                'password': password, 'verification_code': totp(secret, step)}}, session_headers)
+            self.assertEqual(status, 200, body)
+            recovery = json.loads(body)['recovery_codes'][0]
+            status, pending_headers, body = self.request('POST', '/api', {'method': 'login', 'data': {
+                'username': 'mfa_http', 'password': password}})
+            self.assertEqual(status, 200, body)
+            self.assertEqual(json.loads(body), {'mfa_required': True})
+            self.assertNotIn('Set-Cookie', pending_headers)
+            self.assertEqual(self.request('POST', '/api', {'method': 'overview'})[0], 401)
+            status, final_headers, body = self.request('POST', '/api', {'method': 'login', 'data': {
+                'username': 'mfa_http', 'password': password, 'code': recovery}}, {'User-Agent': 'Final browser'})
+            self.assertEqual(status, 200, body)
+            self.assertIn('HttpOnly', final_headers['Set-Cookie'])
+            self.assertNotIn('token', json.loads(body))
+            final_cookie = final_headers['Set-Cookie'].split(';')[0]
+            status, _, body = self.request('POST', '/api', {'method': 'security.sessions'}, {'Cookie': final_cookie})
+            self.assertEqual(status, 200, body)
+            self.assertIn('Final browser', body.decode())
+            self.assertNotIn(final_cookie.split('=', 1)[1], body.decode())
+
+    def test_password_change_clears_cookie_and_revokes_old_http_session(self):
+        cookie, csrf, _ = self.login()
+        password, new_password = secrets.token_urlsafe(24), secrets.token_urlsafe(24)
+        self.assertEqual(self.request('POST', '/api', {'method': 'accounts.create', 'data': {
+            'username': 'password_http', 'name': 'Password HTTP', 'password': password}},
+            {'Cookie': cookie, 'X-CSRF-Token': csrf})[0], 200)
+        status, response_headers, body = self.request('POST', '/api', {'method': 'login', 'data': {
+            'username': 'password_http', 'password': password}})
+        headers = {'Cookie': response_headers['Set-Cookie'].split(';')[0], 'X-CSRF-Token': json.loads(body)['csrf']}
+        status, changed_headers, body = self.request('POST', '/api', {'method': 'security.password', 'data': {
+            'password': password, 'new_password': new_password}}, headers)
+        self.assertEqual(status, 200, body)
+        self.assertIn('Max-Age=0', changed_headers['Set-Cookie'])
+        self.assertEqual(self.request('POST', '/api', {'method': 'overview'}, headers)[0], 401)
 
 
 if __name__ == "__main__":
