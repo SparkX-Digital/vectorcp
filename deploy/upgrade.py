@@ -31,7 +31,7 @@ def main():
         raise SystemExit('Run as root on an existing VectorCP Linux installation.')
     if (SOURCE/'vectorcp').resolve() == (INSTALL/'vectorcp').resolve():
         raise SystemExit('Extract the reviewed release separately from the active installation.')
-    for filename in ('core.py','agent.py','web.py','distribution.py','hosting.py','hosting_task.py','dns.py','filetools.py'):
+    for filename in ('core.py','agent.py','web.py','distribution.py','hosting.py','hosting_task.py','dns.py','filetools.py','security.py','trash.py','archives.py'):
         path = SOURCE/'vectorcp'/filename
         compile(path.read_text(),str(path),'exec')
     with sqlite3.connect(str(STATE/'control.sqlite3')) as db:
