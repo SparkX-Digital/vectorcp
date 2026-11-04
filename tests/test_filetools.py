@@ -66,6 +66,111 @@ class FileOperationTests(unittest.TestCase):
         return self.call('files.upload.start', {'path': path, 'bytes': len(content),
             'sha256': hashlib.sha256(content).hexdigest()}, **kw)['id']
 
+    def test_hidden_preference_applies_to_list_editor_transfer_search_and_actions(self):
+        self.call('files.mkdir', {'path': '.config', 'show_hidden': True})
+        self.call('files.write', {'path': '.config/.settings', 'content': 'private settings', 'revision': 'new', 'show_hidden': True})
+        self.assertNotIn('.config', [x['name'] for x in self.call('files.list')['files']])
+        self.assertIn('.config', [x['name'] for x in self.call('files.list', {'show_hidden': True})['files']])
+        self.refused(400, 'files.read', {'path': '.config/.settings'})
+        self.assertEqual(self.call('files.read', {'path': '.config/.settings', 'show_hidden': True})['content'], 'private settings')
+        self.assertEqual(self.call('files.search', {'query': 'settings'})['files'], [])
+        matches = self.call('files.search', {'query': 'settings', 'show_hidden': True})['files']
+        self.assertEqual(matches[0]['path'], '.config/.settings')
+        before = self.call('files.describe', {'path': '.config/.settings', 'show_hidden': True})
+        self.call('files.copy', {'path': '.config/.settings', 'revision': before['revision'], 'destination': '.copy', 'show_hidden': True})
+        self.assertEqual((self.public/'.copy').read_text(), 'private settings')
+        for path in ('.', '..', '.config/../index.html', '.vectorcp-reserved', ' name.txt', 'index.html ', 'folder /file.txt'):
+            self.refused(400, 'files.read', {'path': path, 'show_hidden': True})
+
+    def test_external_whitespace_names_cannot_alias_a_normal_file(self):
+        (self.public/'index.html ').write_text('keep separate')
+        before = (self.public/'index.html').read_bytes()
+        listed = self.call('files.list')['files']
+        self.assertNotIn('index.html ', [x['name'] for x in listed])
+        self.refused(400, 'files.remove', {'path': 'index.html ', 'revision': next(x['revision'] for x in listed if x['name']=='index.html')})
+        self.assertEqual((self.public/'index.html').read_bytes(), before)
+        self.assertEqual((self.public/'index.html ').read_text(), 'keep separate')
+
+    def test_permission_changes_use_revision_and_refuse_links_special_bits_and_other_accounts(self):
+        info = self.call('files.permissions', {'path': 'index.html'})
+        self.assertEqual(info['owner'], 'alice')
+        self.assertEqual(self.call('files.chmod', {'path': 'index.html', 'mode': '600', 'revision': info['revision']})['mode'], '600')
+        self.assertEqual((self.public/'index.html').stat().st_mode & 0o7777, 0o600)
+        current = self.call('files.read', {'path': 'index.html'})
+        self.call('files.write', {'path': 'index.html', 'content': 'Permission stays private after saving', 'revision': current['revision']})
+        self.assertEqual((self.public/'index.html').stat().st_mode & 0o7777, 0o600)
+        self.refused(409, 'files.chmod', {'path': 'index.html', 'mode': '644', 'revision': info['revision']})
+        for mode in ('777', '666', '4755', '0644', 644):
+            self.refused(400, 'files.chmod', {'path': 'index.html', 'mode': mode, 'revision': info['revision']})
+        (self.public/'link').symlink_to(self.root/'state/control.sqlite3')
+        self.refused(409, 'files.permissions', {'path': 'link'})
+        self.refused(404, 'files.permissions', {'path': 'index.html'}, session=self.bob)
+        self.refused(403, 'files.chmod', {'path': 'index.html'}, csrf='invalid')
+
+    def test_new_text_file_preserves_a_destination_created_while_saving(self):
+        destination = self.public/'arriving.txt'
+        original = os.fsync
+        def race(fd):
+            if not destination.exists():
+                destination.write_text('Created by the website during save')
+            return original(fd)
+        with patch('vectorcp.core.os.fsync', side_effect=race):
+            self.refused(409, 'files.write', {'path': 'arriving.txt', 'content': 'Editor content', 'revision': 'new'})
+        self.assertEqual(destination.read_text(), 'Created by the website during save')
+        self.assertFalse(list(self.public.glob('.vectorcp-*')))
+
+    def test_recursive_copy_preserves_hidden_content_and_refuses_escapes_or_replacement(self):
+        self.call('files.mkdir', {'path': 'assets'})
+        (self.public/'assets/sub').mkdir()
+        (self.public/'assets/sub/data.bin').write_bytes(bytes(range(256))*100)
+        (self.public/'assets/.settings').write_text('hidden but included')
+        entry = next(x for x in self.call('files.list')['files'] if x['name']=='assets')
+        data = {'path': 'assets', 'destination': 'copied', 'revision': entry['revision']}
+        self.call('files.copy', data)
+        self.assertEqual((self.public/'copied/sub/data.bin').read_bytes(), (self.public/'assets/sub/data.bin').read_bytes())
+        self.assertEqual((self.public/'copied/.settings').read_text(), 'hidden but included')
+        self.refused(409, 'files.copy', data)
+        self.refused(400, 'files.copy', dict(data, destination='assets/inside'))
+        (self.public/'assets/link').symlink_to(self.root/'state/control.sqlite3')
+        entry = next(x for x in self.call('files.list')['files'] if x['name']=='assets')
+        self.refused(400, 'files.copy', dict(data, destination='unsafe', revision=entry['revision']))
+        self.assertFalse((self.public/'unsafe').exists())
+        self.assertFalse(list(self.public.parent.glob('.vectorcp-*')))
+
+    def test_folder_copy_failure_cleans_stage_and_never_publishes_partial_contents(self):
+        self.call('files.mkdir', {'path': 'source'})
+        (self.public/'source/one.txt').write_text('one')
+        (self.public/'source/two.txt').write_text('two')
+        item = next(x for x in self.call('files.list')['files'] if x['name']=='source')
+        data = {'path': 'source', 'destination': 'destination', 'revision': item['revision']}
+        original = self.engine.filetools.publish
+        calls = []
+        def failure(*args, **kwargs):
+            calls.append(True)
+            if len(calls)==2:
+                raise OSError(errno.ENOSPC, 'Storage full')
+            return original(*args, **kwargs)
+        with patch.object(self.engine.filetools, 'publish', side_effect=failure):
+            self.refused(409, 'files.copy', data)
+        self.assertFalse((self.public/'destination').exists())
+        self.assertFalse(list(self.public.parent.glob('.vectorcp-*')))
+        self.assertEqual((self.public/'source/two.txt').read_text(), 'two')
+
+    def test_batch_reports_individual_conflicts_without_losing_completed_items(self):
+        self.call('files.mkdir', {'path': 'destination'})
+        (self.public/'one.txt').write_text('one')
+        (self.public/'two.txt').write_text('two')
+        (self.public/'destination/two.txt').write_text('keep existing')
+        entries = {x['name']: x for x in self.call('files.list')['files']}
+        items = [{'path': name, 'revision': entries[name]['revision']} for name in ('one.txt','two.txt')]
+        result = self.call('files.batch', {'items': items, 'operation': 'copy', 'destination': 'destination'})
+        self.assertFalse(result['ok'])
+        self.assertEqual([r['ok'] for r in result['results']], [True, False])
+        self.assertEqual((self.public/'destination/one.txt').read_text(), 'one')
+        self.assertEqual((self.public/'destination/two.txt').read_text(), 'keep existing')
+        self.refused(400, 'files.batch', {'items': [items[0], items[0]], 'operation': 'copy', 'destination': 'destination'})
+        self.refused(403, 'files.batch', {'items': items, 'operation': 'copy', 'destination': 'destination'}, csrf='wrong')
+
     def chunk(self, ident, content, offset=0):
         return self.call('files.upload.chunk', {'id': ident, 'offset': offset,
             'base64': base64.b64encode(content).decode()})
