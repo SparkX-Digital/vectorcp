@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 from .agent import rpc
 from .core import Fault
 from .filetools import OPERATIONS as FILE_OPERATIONS
+from .security import OPERATIONS as SECURITY_OPERATIONS
 
 STATIC = Path(__file__).with_name("static")
 ROUTES = {"/admin": ("index.html", "text/html; charset=utf-8"), "/reseller": ("index.html", "text/html; charset=utf-8"), "/customer": ("index.html", "text/html; charset=utf-8"), "/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"),
@@ -21,7 +22,7 @@ OPERATIONS = {"overview", "accounts.list", "accounts.create", "accounts.active",
               "files.list", "files.read", "files.write", "files.mkdir", "backups.list", "backups.create", "backups.download", "audit", "logout", "bootstrap", "login", "hosting.enable", "hosting.php", "hosting.wordpress", "hosting.tls", "databases.create", "databases.list", "databases.credentials", "jobs.list", "backups.full", "backups.restore", "backups.delete", "backups.describe", "backups.chunk", "plans.list", "plans.create", "plans.active", "plans.assign", "dns.list", "dns.create", "dns.save", "dns.delete", "dns.export", "dns.verify"}
 
 
-OPERATIONS |= FILE_OPERATIONS
+OPERATIONS |= FILE_OPERATIONS | SECURITY_OPERATIONS | {'accounts.inspect', 'accounts.update', 'accounts.bulk'}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -102,12 +103,13 @@ class Handler(BaseHTTPRequestHandler):
                 self.download_backup(payload.get('data', {}), token)
                 return
             result = rpc(self.server.agent_socket, {"method": payload["method"], "data": payload.get("data", {}),
-                         "token": token, "csrf": self.headers.get("X-CSRF-Token", "")})
+                         "token": token, "csrf": self.headers.get("X-CSRF-Token", ""),
+                         "client": self.headers.get('User-Agent', '')[:256]})
             set_cookie = None
             flags = "; HttpOnly; SameSite=Strict; Path=/" + ("; Secure" if self.server.origin.startswith("https://") else "")
-            if payload["method"] in ("bootstrap", "login"):
+            if payload["method"] in ("bootstrap", "login") and 'token' in result:
                 set_cookie = "vectorcp_session=" + result.pop("token") + "; Max-Age=28800" + flags
-            elif payload["method"] == "logout":
+            elif payload["method"] == "logout" or result.get('signed_out'):
                 set_cookie = "vectorcp_session=; Max-Age=0" + flags
             if payload['method'] == 'backups.download':
                 self.respond(200, base64.b64decode(result['base64']), 'application/gzip', filename=result['filename'])
