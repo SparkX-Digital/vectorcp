@@ -212,11 +212,49 @@ class Distribution:
     def accounts(self, db, actor, method, data):
         self.manager(actor)
         if method == 'accounts.list':
-            where, args = ('', ()) if actor['role'] == 'admin' else ('WHERE u.parent_id=?', (actor['id'],))
+            conditions, args = ([], []) if actor['role'] == 'admin' else (['u.parent_id=?'], [actor['id']])
+            query = data.get('query', '')
+            if not isinstance(query, str) or len(query) > 100:
+                raise Fault('Use a search up to 100 characters.')
+            if query.strip():
+                conditions.append("instr(lower(u.username || ' ' || u.name || ' ' || u.contact_email),?)>0")
+                args.append(query.strip().lower())
+            kind, active = data.get('role', 'all'), data.get('status', 'all')
+            if kind not in ('all', 'admin', 'reseller', 'customer') or active not in ('all', 'active', 'locked'):
+                raise Fault('Invalid account filter.')
+            if kind != 'all':
+                conditions.append("(CASE WHEN u.is_reseller=1 THEN 'reseller' ELSE u.role END)=?")
+                args.append(kind)
+            if active != 'all':
+                conditions.append('u.active=?')
+                args.append(int(active == 'active'))
+            limit = integer(data.get('limit', 1000), 'page size', 1, 1000)
+            offset = integer(data.get('offset', 0), 'page offset', 0, 2147483647)
+            where = 'WHERE ' + ' AND '.join(conditions) if conditions else ''
+            total = db.execute('SELECT COUNT(*) FROM users u ' + where, args).fetchone()[0]
             rows = []
-            for row in db.execute('SELECT u.*,p.name AS plan_name FROM users u LEFT JOIN plans p ON p.id=u.plan_id ' + where + ' ORDER BY u.username', args):
+            for row in db.execute('SELECT u.*,p.name AS plan_name FROM users u LEFT JOIN plans p ON p.id=u.plan_id ' + where + ' ORDER BY u.username LIMIT ? OFFSET ?', args + [limit, offset]):
                 rows.append(dict(self.e.public_user(row), plan_name=row['plan_name'], features=self.features(db, row)))
-            return {'accounts': rows}
+            return {'accounts': rows, 'total': total, 'offset': offset, 'limit': limit}
+        if method == 'accounts.bulk':
+            ids = data.get('ids')
+            if not isinstance(ids, list) or not 1 <= len(ids) <= 100 or any(isinstance(i, bool) or not isinstance(i, int) for i in ids) or len(set(ids)) != len(ids):
+                raise Fault('Choose between 1 and 100 different accounts.')
+            operation = data.get('operation')
+            if operation not in ('lock', 'enable', 'plan'):
+                raise Fault('Choose lock, enable or change plan.')
+            # Check the entire selection before any mutation. The request's SQLite
+            # transaction also rolls back earlier plan assignments on a later failure.
+            targets = [self.target(db, actor, ident) for ident in ids]
+            if actor['role'] == 'reseller' and any(t['admin_lock'] for t in targets):
+                raise Fault('The selection includes an account locked by the server owner.', 403)
+            for target in targets:
+                if operation == 'plan':
+                    self.plans(db, actor, 'plans.assign', {'id': target['id'], 'plan_id': data.get('plan_id')})
+                else:
+                    self.set_access(db, actor, target, operation == 'enable')
+            self.e.log(db, actor, 'accounts.bulk_' + operation, ','.join(str(i) for i in ids))
+            return {'ok': True, 'changed': len(ids)}
         if method == 'accounts.create':
             username = text(data.get('username'), 'username', 32).lower()
             if not USERNAME.fullmatch(username):
@@ -249,11 +287,32 @@ class Distribution:
             self.e.log(db, actor, 'reseller.created' if kind == 'reseller' else 'account.created', username)
             return {'ok': True, 'id': cur.lastrowid}
         target = self.target(db, actor, data.get('id'))
+        if method == 'accounts.inspect':
+            plan = db.execute('SELECT name FROM plans WHERE id=?', (target['plan_id'],)).fetchone()
+            return {'account': dict(self.e.public_user(target), created=target['created'],
+                         plan_name=plan['name'] if plan else None, features=self.features(db, target)),
+                    'websites': [dict(r) for r in db.execute('SELECT id,domain,status,runtime,tls FROM sites WHERE user_id=? ORDER BY domain', (target['id'],))],
+                    'file_bytes': self.e.account_usage(db, target['id']),
+                    'customers': self.usage(db, target)['customers'] if target['is_reseller'] else 0,
+                    'active_sessions': db.execute('SELECT COUNT(*) FROM sessions WHERE user_id=? AND expires>?', (target['id'], int(time.time()))).fetchone()[0]}
+        if method == 'accounts.update':
+            from .security import email
+            name, contact = text(data.get('name'), 'name', 80), email(data.get('contact_email', ''))
+            if actor['role'] == 'reseller' and target['admin_lock']:
+                raise Fault('The server owner has locked this account.', 403)
+            db.execute('UPDATE users SET name=?,contact_email=? WHERE id=?', (name, contact, target['id']))
+            self.e.log(db, actor, 'account.updated', target['username'])
+            return {'ok': True}
+        if method != 'accounts.active':
+            raise Fault('Unknown account operation.', 404)
         if not isinstance(data.get('active'), bool):
             raise Fault('Invalid account state.')
+        self.set_access(db, actor, target, data['active'])
+        return {'ok': True}
+
+    def set_access(self, db, actor, target, active):
         if actor['role'] == 'reseller' and target['admin_lock']:
             raise Fault('The server owner has locked this account.', 403)
-        db.execute('UPDATE users SET active=?,admin_lock=? WHERE id=?', (int(data['active']), int(actor['role'] == 'admin' and not data['active']), target['id']))
+        db.execute('UPDATE users SET active=?,admin_lock=? WHERE id=?', (int(active), int(actor['role'] == 'admin' and not active), target['id']))
         db.execute('DELETE FROM sessions WHERE user_id=? OR user_id IN (SELECT id FROM users WHERE parent_id=?)', (target['id'], target['id']))
-        self.e.log(db, actor, 'account.access_enabled' if data['active'] else 'account.access_locked', target['username'])
-        return {'ok': True}
+        self.e.log(db, actor, 'account.access_enabled' if active else 'account.access_locked', target['username'])
