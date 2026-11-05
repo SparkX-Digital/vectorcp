@@ -1,6 +1,6 @@
 # VectorCP capability catalog
 
-Updated 4 November 2026. This catalog defines the intended scope for a free,
+Updated 5 November 2026. This catalog defines the intended scope for a free,
 self-hosted hosting panel. It consolidates customer tools, reseller operations
 and server administration into original product requirements. It is not a
 claim that every tool is implemented.
@@ -75,7 +75,7 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 | VCP-0305 | Modify account details and contact information | Available |
 | VCP-0306 | Change assigned hosting plan | Partial |
 | VCP-0307 | Terminate an account with recovery and cleanup | Planned |
-| VCP-0308 | Bulk account changes and suspensions | Partial |
+| VCP-0308 | Bulk account changes and suspensions | Available |
 | VCP-0309 | Transfer account ownership between resellers | Planned |
 | VCP-0310 | Move account data between storage locations | Planned |
 | VCP-0311 | Dedicated/shared address assignment | Planned |
@@ -83,8 +83,10 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 | VCP-0313 | Account demo mode | Planned |
 | VCP-0314 | Audited owner/delegate sign-on to a customer workspace | Planned |
 
-Selected-account access and plan changes are implemented. Bulk website suspension
-is still unfinished, so VCP-0308 remains Partial.
+Selected-account access and plan changes use an atomic database transaction.
+Selected-website suspension/activation runs one authorized request at a time and
+reports per-domain outcomes; it stops on an uncertain response. See
+[BULK_OPERATIONS.md](BULK_OPERATIONS.md) for limits and recovery.
 
 ## Plans and reseller business
 
