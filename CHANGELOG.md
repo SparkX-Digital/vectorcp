@@ -12,6 +12,10 @@ unchanged; a 0.4.3 release archive has not yet been published.
 
 ### Added
 
+- Selected-website suspension and activation, bounded to 20 domains, with
+  per-domain results, filter-aware selections, owner-hold enforcement and
+  stopping without retries after uncertain responses.
+
 - Own-device session inventory, individual/current/all-other revocation, bounded
   active sessions and migration of existing sessions without changing the
   original session table's four-column contract.
@@ -52,8 +56,9 @@ unchanged; a 0.4.3 release archive has not yet been published.
 - Authenticator secrets rely on root-only database/state permissions and are not
   encrypted at rest. Email recovery/notifications and passkeys remain unfinished.
 - Folder/archive/trash operations have explicit bounds; file batches report
-  individual outcomes. Bulk website suspension, volume resizing, mail, public
-  DNS, migration and the wider catalog remain unfinished.
+  individual outcomes. Website batches stay in the browser and do not resume
+  after it closes. Volume resizing, mail, public DNS, migration and the wider
+  catalog remain unfinished.
 
 ## 0.4.2 — 3 November 2026 · Development snapshot
 
