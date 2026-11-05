@@ -64,7 +64,7 @@ class HttpBoundaryTests(unittest.TestCase):
             self.assertIn("frame-ancestors 'none'",headers['Content-Security-Policy'])
 
     def test_app_and_assets_have_csp_and_nosniff(self):
-        for path in ("/", "/app.js", "/style.css", "/favicon.svg", "/brand.svg", "/brand-light.svg"):
+        for path in ("/", "/app.js", "/site-batch.js", "/style.css", "/favicon.svg", "/brand.svg", "/brand-light.svg"):
             with self.subTest(path=path):
                 status, headers, body = self.request(path=path)
                 self.assertEqual(status, 200)
