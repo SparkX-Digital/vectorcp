@@ -82,7 +82,7 @@ The final private acceptance candidate was SHA-256
 `86f13bd006ae4df979e65662650b35b64c96e665208fe4945d1d577c4122bd3f`.
 All ten installed Python/frontend file SHA-256 values match commit
 `6ceb93adc1c1519a68ca1910fdf3f0dd25e4e251` (PR #4). The subsequent bulk-website UI
-follow-up below is separate from that native acceptance candidate. Private fixture credentials and customer configuration
+follow-up documented above is separate from that native acceptance candidate. Private fixture credentials and customer configuration
 are excluded from the result summary and source. No stable release or independent
 security audit is claimed.
 
