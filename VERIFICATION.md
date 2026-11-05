@@ -1,3 +1,36 @@
+# Unreleased 0.4.3 bulk website follow-up
+
+Verified 5 November 2026. The catalog now records **253 workflows: 45 Available,
+20 Partial and 188 Planned**. VCP-0308 adds selected-website suspension/activation
+to the already implemented atomic account access/plan changes. See
+[BULK_OPERATIONS.md](BULK_OPERATIONS.md).
+
+- All 113 Python unit/local HTTP executions passed again on Python 3.13 in
+  74.778 seconds, including serving the new script with the existing CSP.
+- Ten Node tests passed for ordered single-request execution, activation,
+  permission/not-found/busy refusals, expired sessions, uncertain server/network
+  responses, stopping without retries, and input bounds before any mutation.
+- Actual local-browser controls suspended and reactivated two websites, cleared
+  hidden selections after filtering, and showed both per-domain results. A
+  reseller batch retained the owner's hold on one website while successfully
+  activating its other website. The resulting list preserved the hold and
+  correct states. No public website was suspended for these tests.
+- The batch uses the existing `sites.active` privileged endpoint and its current
+  authorization/configuration behavior. It adds no new privileged batch API.
+  Native endpoint/owner-hold evidence is retained below; this follow-up browser
+  batch itself was exercised locally, not against the native guest. Native
+  evidence for PR #4 does not assert that this changed frontend was installed.
+- JavaScript syntax and diff checks passed. The new batch UI uses the existing
+  shared table, toolbar, dialog, selection and control styles. At the 463-pixel
+  browser viewport it retains the table's contained horizontal scrolling, has
+  no document overflow, and all visible buttons are at least 44 pixels high.
+
+Website batches retain completed items and report refusals. They stop after an
+uncertain response or session expiry. They do not resume after closing the page.
+This remains development source, without a stable release or independent audit.
+
+---
+
 # Unreleased 0.4.3 account, security and file workflow verification
 
 Verified 4 November 2026. This development source adds ten completed workflows;
@@ -47,8 +80,9 @@ passed all **13 installed-service checks**:
 
 The final private acceptance candidate was SHA-256
 `86f13bd006ae4df979e65662650b35b64c96e665208fe4945d1d577c4122bd3f`.
-All ten installed Python/frontend file SHA-256 values match this working tree. Publication adds this final evidence document without changing
-those tested runtime files. Private fixture credentials and customer configuration
+All ten installed Python/frontend file SHA-256 values match commit
+`6ceb93adc1c1519a68ca1910fdf3f0dd25e4e251` (PR #4). The subsequent bulk-website UI
+follow-up below is separate from that native acceptance candidate. Private fixture credentials and customer configuration
 are excluded from the result summary and source. No stable release or independent
 security audit is claimed.
 
