@@ -7,8 +7,8 @@ authorization checks, recovery behavior and reproducible acceptance evidence.
 
 The [product specification](PRODUCT.md) defines the roles, installation contract
 and release gates. The [capability catalog](CAPABILITIES.md) breaks the full
-scope into customer, reseller and administrator workflows. Updated 3 November
-2026 after a read-only review of public hosting-tool demonstrations. Demo
+scope into customer, reseller and administrator workflows. Updated 4 November
+2026 with Unreleased account/security and file workflows. Demo
 screens reveal controls, but cannot establish undocumented behavior or prove
 that an action works on a real server.
 
@@ -31,12 +31,12 @@ evidence. Features can move between milestones when dependencies require it.
 
 | Area | Current status | Target behavior | Acceptance target |
 | --- | --- | --- | --- |
-| Installation | Partial: fresh-host preflight and native installation scripts. New layout acceptance and selectable profiles pending. | Fresh AlmaLinux 9; x86-64 and ARM64; Core, Complete and DNS-only profiles; resumable setup | Install on clean images; interruption and retry; refuse incompatible or conflicting hosts |
+| Installation | Partial: fresh native installation and application upgrade/startup rollback verified on AlmaLinux 9 x86-64. Selectable profiles and alternate architectures pending. | Fresh AlmaLinux 9; x86-64 and ARM64; Core, Complete and DNS-only profiles; resumable setup | Install on clean images; interruption and retry; refuse incompatible or conflicting hosts |
 | Initial access | Partial: one-time setup and role entry paths; further onboarding remains. | One-time administrator setup; separated administrator/reseller and customer entry points | Setup cannot be claimed without its token; token expires after use; correct role routing |
-| Authentication | Partial: hashed passwords, sessions, CSRF and throttling. MFA/recovery pending. | Password hashing, rate limits, session controls, two-factor authentication and recovery | Session fixation, cross-site request forgery, brute-force and recovery tests |
+| Authentication | Partial: authenticator/recovery codes, session management, password policy/rotation, CSRF and throttling. Email account recovery and passkeys pending. | Password hashing, rate limits, session controls, two-factor authentication and recovery | Session fixation, cross-site request forgery, brute-force and recovery tests |
 | Hierarchy | Partial: owner → reseller → customer. Collaborators/nested tiers pending. | Administrator, reseller, customer and collaborator scopes | Cross-account and cross-reseller requests refused in the backend |
 | Branding | Partial: original shared VectorCP identity. Reseller branding pending. | Original VectorCP interface plus reseller identity settings | Consistent branding across login, navigation, emails and reseller views |
-| Accounts | Partial: creation, access locks and explicit plan assignment. Termination/migration pending. | Creation, plan changes, suspension, restoration and termination | Idempotent jobs; ownership checks; protected system usernames; explicit destructive workflows |
+| Accounts | Partial: creation, contact editing, search/details, password resets and atomic selected-account access/plan changes. Termination, migration and bulk website suspension pending. | Creation, plan changes, suspension, restoration and termination | Idempotent jobs; ownership checks; protected system usernames; explicit destructive workflows |
 | Plans | Partial: immutable packages and explicit assignment. Dynamic inherited updates pending. | Resource allowances and feature switches, inherited by existing accounts | Changing a plan updates actual enforcement and creation limits |
 | Reseller pools | Partial: reserved customer/site/storage allowances. Traffic and aggregate adjustable cgroups pending. | Shared disk, traffic, account, CPU, memory and process limits; overselling policies | Children cannot escape parent limits; accurate pool accounting and recovery from full pools |
 | Disk quotas | Partial: capped ext4 volumes. Inode ceilings/XFS integration pending. | Byte and inode ceilings on XFS and ext4 | Actual writes fail at limits; enforcement survives reboot |
@@ -50,7 +50,7 @@ evidence. Features can move between milestones when dependencies require it.
 | Page cache | Planned; not implemented. | Site-level enablement and purge; bypass of private and commerce pages | No personalized response leakage; cache invalidation tests |
 | Object caches | Planned; not implemented. | Account-specific Redis and Memcached | One customer cannot read another customer's cache |
 | Certificates | Partial: IP/customer HTTP-01 TLS and renewal. Aliases/mail certificates pending. | ACME issue and renewal; aliases; forced HTTPS; mail and webmail TLS | Validation failure recovery; real certificate verification and renewal rehearsal |
-| Files | Partial: text editing, 32 MiB binary transfers/copy, move/rename, filename search and confirmed removal. Trash, archives and batch selection pending. | File browsing, edits, permissions, transfers, archives and trash | Traversal, symlink, archive-escape, ownership and quota tests |
+| Files | Partial: text editing, binary transfers, recursive copy/batches, hidden files, permissions, recoverable trash and bounded ZIP archives. Image editing and FTP/SFTP pending. | File browsing, edits, permissions, transfers, archives and trash | Traversal, symlink, archive-escape, ownership and quota tests |
 | FTP and SSH | Planned; not implemented. | Account access, keys, plan restrictions and jailed customer shells | No access to other homes or host secrets; changes preserve administrator access |
 | Terminals | Planned; not implemented. | Customer jail; administrator sudo workflow with two-factor gate and timeout | Server-side role checks; session teardown; escape testing |
 | Scheduled tasks | Planned; not implemented. | Account-owned cron entries within plan limits | Environment and resource limits enforced; invalid expressions refused |

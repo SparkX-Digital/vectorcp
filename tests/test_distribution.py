@@ -142,5 +142,49 @@ class DistributionTests(unittest.TestCase):
         self.assertIsNone(self.other['user']['parent_id'])
         self.assertEqual(self.call(self.reseller,'overview')['counts']['sites'],1)
 
+    def test_account_search_filters_pages_and_details_stay_inside_delegation(self):
+        self.call(self.reseller, 'accounts.update', {'id': self.cid, 'name': 'Client Studio', 'contact_email': 'hello@example.com'})
+        result = self.call(self.reseller, 'accounts.list', {'query': 'HELLO@', 'role': 'customer', 'status': 'active', 'limit': 1})
+        self.assertEqual(result['total'], 1)
+        self.assertEqual(result['accounts'][0]['id'], self.cid)
+        self.assertEqual(self.call(self.reseller, 'accounts.list', {'query': 'unrelated'})['total'], 0)
+        self.assertEqual(self.call(self.reseller, 'accounts.list', {'offset': 1})['accounts'], [])
+        self.call(self.reseller, 'accounts.active', {'id': self.cid, 'active': False})
+        self.assertEqual(self.call(self.reseller, 'accounts.list', {'status': 'locked'})['total'], 1)
+        details = self.call(self.reseller, 'accounts.inspect', {'id': self.cid})
+        self.assertEqual([s['id'] for s in details['websites']], [self.sid])
+        self.assertGreater(details['file_bytes'], 0)
+        self.assertNotIn('password', details['account'])
+        for method, data in [('accounts.inspect', {'id': self.other_id}), ('accounts.update', {'id': self.other_id, 'name': 'Forged'}), ('accounts.password', {'id': self.other_id})]:
+            self.denied(404, lambda: self.call(self.reseller, method, data))
+        self.denied(401, lambda: self.call(self.client, 'accounts.inspect', {'id': self.cid}))
+        self.denied(403, lambda: self.call(self.other, 'accounts.inspect', {'id': self.other_id}))
+
+    def test_bulk_access_is_atomic_and_owner_holds_are_preserved(self):
+        other_child = self.customer(self.reseller, 'second', plan_id=self.cplan)
+        self.denied(404, lambda: self.call(self.reseller, 'accounts.bulk', {'ids': [self.cid, self.other_id], 'operation': 'lock'}))
+        self.assertIn('token', self.e.login({'username': 'client', 'password': self.password}))
+        self.call(self.admin, 'accounts.active', {'id': other_child, 'active': False})
+        self.denied(403, lambda: self.call(self.reseller, 'accounts.bulk', {'ids': [self.cid, other_child], 'operation': 'enable'}))
+        self.call(self.admin, 'accounts.bulk', {'ids': [self.rid], 'operation': 'lock'})
+        self.denied(401, lambda: self.call(self.client, 'overview'))
+        self.denied(401, lambda: self.call(self.reseller, 'overview'))
+        self.assertEqual(self.call(self.admin, 'sites.list')['sites'][0]['status'], 'active')
+
+    def test_bulk_plan_failure_restores_earlier_assignments_and_reservations(self):
+        second = self.customer(self.reseller, 'second', plan_id=self.cplan)
+        small = self.plan(self.reseller, 'Smaller', storage_mb=512, site_limit=1)
+        # First target can change; second has an immutable native volume size.
+        with self.e.db() as db:
+            db.execute('UPDATE users SET hosting_slot=3 WHERE id=?', (second,))
+        self.denied(409, lambda: self.call(self.reseller, 'accounts.bulk', {'ids': [self.cid, second], 'operation': 'plan', 'plan_id': small}))
+        self.assertEqual(self.call(self.reseller, 'accounts.inspect', {'id': self.cid})['account']['plan_id'], self.cplan)
+        with self.e.db() as db:
+            db.execute('UPDATE users SET hosting_slot=NULL WHERE id=?', (second,))
+        self.call(self.reseller, 'accounts.bulk', {'ids': [self.cid, second], 'operation': 'plan', 'plan_id': small})
+        self.assertEqual(self.call(self.reseller, 'plans.list')['pool']['storage_mb'], 1024)
+        for ids in ([], [self.cid, self.cid], [True], list(range(1, 102))):
+            self.denied(400, lambda: self.call(self.reseller, 'accounts.bulk', {'ids': ids, 'operation': 'lock'}))
+
 
 if __name__=='__main__': unittest.main()

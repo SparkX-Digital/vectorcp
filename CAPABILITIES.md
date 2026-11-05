@@ -1,6 +1,6 @@
 # VectorCP capability catalog
 
-Updated 3 November 2026. This catalog defines the intended scope for a free,
+Updated 4 November 2026. This catalog defines the intended scope for a free,
 self-hosted hosting panel. It consolidates customer tools, reseller operations
 and server administration into original product requirements. It is not a
 claim that every tool is implemented.
@@ -10,6 +10,11 @@ in [FEATURES.md](FEATURES.md). **Partial** means a narrower implementation exist
 **Planned** means no complete backend/workflow is delivered. None of these labels
 asserts an independent security audit or production acceptance. The 0.4.x
 installation-layout validation remains separate from earlier service evidence.
+
+Statuses describe the current development source. The **Unreleased** account,
+security and file workflows are not part of the immutable 0.4.2 download; see
+[CHANGELOG.md](CHANGELOG.md), [ACCOUNT_SECURITY.md](ACCOUNT_SECURITY.md) and
+[FILE_MANAGER.md](FILE_MANAGER.md) for implementation limits and evidence.
 
 Stable IDs identify work items and acceptance evidence. A row is a user workflow,
 not necessarily a screen or a single development task. Read [PRODUCT.md](PRODUCT.md)
@@ -47,11 +52,11 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 | VCP-0201 | Password sign-in and session expiry | Available |
 | VCP-0202 | Separate owner, reseller and customer entry points | Available |
 | VCP-0203 | CSRF, host/origin validation and login throttling | Available |
-| VCP-0204 | Active-session inventory and remote revocation | Partial |
-| VCP-0205 | Two-factor authentication and recovery codes | Planned |
+| VCP-0204 | Active-session inventory and remote revocation | Available |
+| VCP-0205 | Two-factor authentication and recovery codes | Available |
 | VCP-0206 | Passkey enrollment and role policy | Planned |
 | VCP-0207 | Account recovery and security notifications | Planned |
-| VCP-0208 | Password strength policy and forced rotation | Planned |
+| VCP-0208 | Password strength policy and forced rotation | Available |
 | VCP-0209 | Collaborator identities and granular permissions | Planned |
 | VCP-0210 | External identity-provider connections | Planned |
 
@@ -64,19 +69,22 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 | ID | Capability | Status |
 | --- | --- | --- |
 | VCP-0301 | Create customer and reseller accounts | Available |
-| VCP-0302 | Search, filter and inspect accounts | Partial |
+| VCP-0302 | Search, filter and inspect accounts | Available |
 | VCP-0303 | Account access locks and child-session revocation | Available |
 | VCP-0304 | Independent website suspension | Available |
-| VCP-0305 | Modify account details and contact information | Partial |
+| VCP-0305 | Modify account details and contact information | Available |
 | VCP-0306 | Change assigned hosting plan | Partial |
 | VCP-0307 | Terminate an account with recovery and cleanup | Planned |
-| VCP-0308 | Bulk account changes and suspensions | Planned |
+| VCP-0308 | Bulk account changes and suspensions | Partial |
 | VCP-0309 | Transfer account ownership between resellers | Planned |
 | VCP-0310 | Move account data between storage locations | Planned |
 | VCP-0311 | Dedicated/shared address assignment | Planned |
 | VCP-0312 | Restricted shell access policy | Planned |
 | VCP-0313 | Account demo mode | Planned |
 | VCP-0314 | Audited owner/delegate sign-on to a customer workspace | Planned |
+
+Selected-account access and plan changes are implemented. Bulk website suspension
+is still unfinished, so VCP-0308 remains Partial.
 
 ## Plans and reseller business
 
@@ -153,11 +161,11 @@ for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
 | VCP-0701 | Browse files and create folders | Available |
 | VCP-0702 | Bounded atomic UTF-8 text editing | Available |
 | VCP-0703 | Upload and download individual files | Available |
-| VCP-0704 | Copy, move, rename and batch selection | Partial |
-| VCP-0705 | Trash, undo and permanent removal | Partial |
-| VCP-0706 | Archive create/extract with safe paths | Planned |
-| VCP-0707 | File permission and ownership controls | Planned |
-| VCP-0708 | Hidden-file controls and search | Partial |
+| VCP-0704 | Copy, move, rename and batch selection | Available |
+| VCP-0705 | Trash, undo and permanent removal | Available |
+| VCP-0706 | Archive create/extract with safe paths | Available |
+| VCP-0707 | File permission and ownership controls | Available |
+| VCP-0708 | Hidden-file controls and search | Available |
 | VCP-0709 | Image resize, thumbnails and conversion | Planned |
 | VCP-0710 | Disk/inode usage drill-down | Planned |
 | VCP-0711 | FTP/FTPS accounts and client configuration | Planned |

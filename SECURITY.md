@@ -34,6 +34,13 @@ DNS in 0.3 is a loopback-only authoritative preview. It cannot change a domain's
 public DNS until the operator independently configures a public DNS service or
 imports the zone at an existing provider. No public recursive resolver is enabled.
 
-Production hardening, secret encryption, MFA/recovery, comprehensive audit of
-service helpers, hostile concurrent workload testing, signed updates and clean
-recovery drills remain necessary work. See `FEATURES.md` and `VERIFICATION.md`.
+The Unreleased source adds authenticator enrollment, single-use recovery codes,
+private session inventory/revocation, credential rechecks and temporary-password
+rotation. See [ACCOUNT_SECURITY.md](ACCOUNT_SECURITY.md) for their limits and
+storage model. Authenticator secrets are protected by root-only state permissions,
+not encrypted at rest. Lost-password recovery and notification delivery remain
+unfinished.
+
+Production hardening, secret encryption, comprehensive audit of service helpers,
+hostile concurrent workload testing, signed updates and clean recovery drills
+remain necessary work. See `FEATURES.md` and `VERIFICATION.md`.

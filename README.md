@@ -4,7 +4,7 @@
 
 VectorCP is free, independently written software under the MIT license. Install
 it on your own server to manage websites, or use it to run a hosting business
-with owner, reseller and customer workspaces. Version 0.4.2 is a development
+with owner, reseller and customer workspaces. Version 0.4.2 is the latest published development
 release. [Feature coverage](FEATURES.md) states the available tools and limits;
 the [product specification](PRODUCT.md) defines the wider scope being built.
 
@@ -12,6 +12,13 @@ The product has no provider-specific dependency, license server or activation
 fee. A user's VPS is one deployment. Do not embed its credentials or customer
 data in the source. Supported installation target: dedicated AlmaLinux 9;
 x86-64 has been exercised. Other platforms and ARM64 remain unverified.
+
+The current development branch (source version **0.4.3**) adds **Unreleased** session management,
+authenticator/recovery codes, password controls, account search/contact editing,
+selected-account changes, recursive file operations, trash, permissions and ZIP
+archives. These additions are not in the immutable 0.4.2 download. See the
+[changelog](CHANGELOG.md), [account/security guide](ACCOUNT_SECURITY.md) and
+[file-manager guide](FILE_MANAGER.md) for the tested scope and limits.
 
 ## Project
 

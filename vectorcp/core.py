@@ -42,8 +42,13 @@ def digest(value):
 
 
 def password_hash(password):
-    if not isinstance(password, str) or not 12 <= len(password) <= 256:
-        raise Fault("Use a password between 12 and 256 characters.")
+    if not isinstance(password, str) or not 15 <= len(password) <= 256:
+        raise Fault("Use a password between 15 and 256 characters.")
+    common = {'password123456789', '123456789012345', '1234567890123456',
+              'qwertyuiopasdfgh', 'letmeinletmein123', 'changemechangeme',
+              'adminadminadmin', 'passwordpassword', 'iloveyouiloveyou'}
+    if password.casefold() in common or len(set(password.casefold())) < 4:
+        raise Fault('Choose a less predictable password or a longer passphrase.')
     salt = secrets.token_bytes(24)
     key = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 600000)
     return "pbkdf2_sha256$600000$%s$%s" % (salt.hex(), key.hex())
@@ -150,12 +155,20 @@ class Engine:
         with self.db() as db:
             migrate(db)
         self.distribution = Distribution(self)
+        from .security import Security, migrate as migrate_security
+        with self.db() as db:
+            migrate_security(db)
+        self.security = Security(self)
         from .hosting import Hosting
         self.hosting = Hosting(self)
         from .dns import DNS
         self.dns = DNS(self)
         from .filetools import FileTools
         self.filetools = FileTools(self)
+        from .trash import Trash
+        self.trash = Trash(self)
+        from .archives import Archives
+        self.archives = Archives(self)
         os.chmod(self.db_path, 0o600)
 
     @contextlib.contextmanager
@@ -184,15 +197,12 @@ class Engine:
         db.execute("INSERT INTO audit(user_id,actor,action,target,created) VALUES(?,?,?,?,?)",
                    (actor["id"] if actor else None, actor["username"] if actor else "setup", action, str(target)[:253], int(time.time())))
 
-    def session(self, db, user):
-        token, csrf = secrets.token_urlsafe(48), secrets.token_urlsafe(32)
-        db.execute("DELETE FROM sessions WHERE expires<?", (int(time.time()),))
-        db.execute("INSERT INTO sessions VALUES(?,?,?,?)", (digest(token), user["id"], csrf, int(time.time()) + SESSION_SECONDS))
-        return {"token": token, "csrf": csrf, "user": self.public_user(user)}
+    def session(self, db, user, client=''):
+        return self.security.session(db, user, client)
 
     @staticmethod
     def public_user(user):
-        result = {key: user[key] for key in ("id", "username", "name", "role", "active", "site_limit", "storage_mb", "hosting_slot", "is_reseller", "parent_id", "plan_id", "admin_lock")}
+        result = {key: user[key] for key in ("id", "username", "name", "role", "active", "site_limit", "storage_mb", "hosting_slot", "is_reseller", "parent_id", "plan_id", "admin_lock", "password_change_required", "contact_email")}
         if user['is_reseller']:
             result['role'] = 'reseller'
         return result
@@ -200,14 +210,16 @@ class Engine:
     def authenticate(self, db, token):
         if not isinstance(token, str) or len(token) > 128:
             raise Fault("Please sign in.", 401)
-        row = db.execute("SELECT u.*,s.csrf FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires>? AND u.active=1",
+        row = db.execute("SELECT u.*,s.csrf,d.id AS session_id FROM sessions s JOIN users u ON u.id=s.user_id JOIN session_details d ON d.token=s.token WHERE s.token=? AND s.expires>? AND u.active=1",
                          (digest(token), int(time.time()))).fetchone()
         from .distribution import available
         if not available(db, row):
             raise Fault("Your session has expired. Please sign in.", 401)
+        now = int(time.time())
+        db.execute('UPDATE session_details SET last_seen=? WHERE id=? AND last_seen<?', (now, row['session_id'], now - 60))
         return dict(row, role="reseller" if row["is_reseller"] else row["role"])
 
-    def bootstrap(self, data):
+    def bootstrap(self, data, client=''):
         username = text(data.get("username"), "username", 32).lower()
         name = text(data.get("name"), "name", 80)
         if not USERNAME.fullmatch(username):
@@ -225,12 +237,15 @@ class Engine:
             user = db.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
             db.execute("DELETE FROM setup")
             self.log(db, user, "administrator.created", username)
-            return self.session(db, user)
+            return self.session(db, user, client)
 
-    def login(self, data):
+    def login(self, data, client=''):
         username = text(data.get("username"), "username", 32).lower()
+        if not USERNAME.fullmatch(username):
+            raise Fault('Username or password is incorrect.', 401)
         now = int(time.time())
         with self.lock, self.db() as db:
+            db.execute('DELETE FROM failures WHERE window<? AND blocked_until<=?', (now - 900, now))
             failure = db.execute("SELECT * FROM failures WHERE username=?", (username,)).fetchone()
             if failure and failure["blocked_until"] > now:
                 raise Fault("Too many attempts. Try again in 15 minutes.", 429)
@@ -248,9 +263,14 @@ class Engine:
                 from .distribution import role
                 if entry not in ('admin', 'reseller', 'customer') or role(user) != entry:
                     raise Fault('Use the sign-in page for your account type.', 403)
+            if self.security.enabled(db, user['id']):
+                if not data.get('code'):
+                    return {'mfa_required': True}
+                if not self.security.factor(db, user['id'], data.get('code')):
+                    self.security.failed(db, username, failure)
             db.execute("DELETE FROM failures WHERE username=?", (username,))
             self.log(db, user, "session.created", username)
-            return self.session(db, user)
+            return self.session(db, user, client)
 
     def dispatch(self, request):
         if not isinstance(request, dict):
@@ -261,24 +281,29 @@ class Engine:
         if method == "health":
             return {"service": "vectorcp-agent", "ok": True, "version": VERSION}
         if method == "login":
-            return self.login(data)
+            return self.login(data, request.get('client', ''))
         if method == "bootstrap":
-            return self.bootstrap(data)
+            return self.bootstrap(data, request.get('client', ''))
         from .filetools import OPERATIONS as file_operations, READ_ONLY as file_reads
+        from .security import OPERATIONS as security_operations, READ_ONLY as security_reads
         allowed = {"overview", "accounts.list", "accounts.create", "accounts.active", "sites.list", "sites.create", "sites.active",
                    "files.list", "files.read", "files.write", "files.mkdir", "backups.list", "backups.create", "backups.download", "audit", "logout", "hosting.enable", "hosting.php", "hosting.wordpress", "hosting.tls", "databases.create", "databases.list", "databases.credentials", "jobs.list", "backups.full", "backups.restore", "backups.delete", "backups.describe", "backups.chunk", "plans.list", "plans.create", "plans.active", "plans.assign", "dns.list", "dns.create", "dns.save", "dns.delete", "dns.export", "dns.verify"}
-        allowed |= file_operations
+        allowed |= file_operations | security_operations | {'accounts.inspect', 'accounts.update', 'accounts.bulk'}
         if method not in allowed:
             raise Fault("Unknown operation.", 404)
         read_only = method in {"overview", "accounts.list", "sites.list", "files.list", "files.read", "backups.list", "backups.download", "audit", "jobs.list", "databases.list", "databases.credentials", "backups.describe", "backups.chunk", "plans.list", "dns.list", "dns.export"}
-        read_only = read_only or method in file_reads
+        read_only = read_only or method in file_reads | security_reads | {'accounts.inspect'}
         with self.lock, self.db() as db:
             actor = self.authenticate(db, request.get("token"))
+            if actor['password_change_required'] and method not in {'overview', 'security.status', 'security.password', 'logout'}:
+                raise Fault('Change your temporary password before continuing.', 403)
             if not read_only:
                 csrf = request.get("csrf")
                 if not isinstance(csrf, str) or not hmac.compare_digest(csrf, actor["csrf"]):
                     raise Fault("Request verification failed. Refresh and try again.", 403)
             from .distribution import scope, manages
+            if method in security_operations:
+                return self.security.dispatch(db, actor, method, data)
             if method.startswith('dns.'):
                 return self.dns.dispatch(db, actor, method, data)
             if method.startswith('plans.'):
@@ -366,15 +391,18 @@ class Engine:
         total = 0
         for row in db.execute("SELECT * FROM sites WHERE user_id=?", (user_id,)):
             root = self.site_root(row)
-            for folder, dirs, names in os.walk(root, followlinks=False):
-                dirs[:] = [d for d in dirs if not (Path(folder) / d).is_symlink()]
-                for name in names:
-                    try:
-                        st = (Path(folder) / name).lstat()
-                    except FileNotFoundError:
-                        continue
-                    if stat.S_ISREG(st.st_mode):
-                        total += st.st_size
+            for area in (root, root.parent / '.vectorcp-trash'):
+                if area.is_symlink():
+                    continue
+                for folder, dirs, names in os.walk(area, followlinks=False):
+                    dirs[:] = [d for d in dirs if not (Path(folder) / d).is_symlink()]
+                    for name in names:
+                        try:
+                            st = (Path(folder) / name).lstat()
+                        except FileNotFoundError:
+                            continue
+                        if stat.S_ISREG(st.st_mode):
+                            total += st.st_size
         return total
 
     def site_create(self, db, actor, data):
@@ -492,12 +520,12 @@ class Engine:
             raise
 
     @contextlib.contextmanager
-    def directory(self, root, relative=""):
+    def directory(self, root, relative="", hidden=False):
         if not isinstance(relative, str) or len(relative) > 512:
             raise Fault("Invalid file path.")
         parts = relative.split("/") if relative else []
-        if any(p in ("", ".", "..") or p.startswith(".") or "\\" in p or len(p) > 200 for p in parts):
-            raise Fault("Use a relative path without hidden folders or parent references.")
+        if any(not self.file_name(p, hidden) for p in parts):
+            raise Fault("Use a supported relative path; enable hidden files to open dot folders.")
         fd = None
         try:
             fd = os.open(str(root), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
@@ -514,38 +542,56 @@ class Engine:
         finally:
             os.close(fd)
 
-    def file_parts(self, path):
+    @staticmethod
+    def file_name(name, hidden=False):
+        if not isinstance(name, str) or name != name.strip() or name.startswith('.vectorcp-'):
+            return False
+        pattern = r'(?:[a-zA-Z0-9][a-zA-Z0-9_. -]{0,199}|\.[a-zA-Z0-9_][a-zA-Z0-9_. -]{0,198})' if hidden else r'[a-zA-Z0-9][a-zA-Z0-9_. -]{0,199}'
+        return bool(re.fullmatch(pattern, name))
+
+    def file_parts(self, path, hidden=False):
+        if not isinstance(path, str) or path != path.strip():
+            raise Fault('File paths cannot start or end with whitespace.')
         path = text(path, "file path", 512)
         if path.startswith("/") or "\\" in path:
             raise Fault("Use a relative file path.")
         folder, _, name = path.rpartition("/")
-        if not name or name.startswith(".") or not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_. -]{0,199}", name):
+        if not self.file_name(name, hidden) or (folder and any(not self.file_name(p, hidden) for p in folder.split('/'))):
             raise Fault("Invalid file name.")
         return folder, name
 
     def check_entry_limit(self, root):
         count = 0
-        for folder, directories, files in os.walk(root, followlinks=False):
-            count += len(directories) + len(files)
-            directories[:] = [d for d in directories if not (Path(folder) / d).is_symlink()]
-            if count >= (12000 if self.hosting.enabled else 1000):
-                raise Fault("This website has reached its file and folder entry limit.", 409)
+        for area in (root, root.parent / '.vectorcp-trash'):
+            if area.is_symlink():
+                continue
+            for folder, directories, files in os.walk(area, followlinks=False):
+                count += len(directories) + len(files)
+                directories[:] = [d for d in directories if not (Path(folder) / d).is_symlink()]
+                if count >= (12000 if self.hosting.enabled else 1000):
+                    raise Fault("This website has reached its file and folder entry limit (including trash).", 409)
 
     def files(self, db, actor, site, method, data):
         root, path = self.site_root(site), data.get("path", "")
+        hidden = data.get('show_hidden', False)
+        if not isinstance(hidden, bool):
+            raise Fault('Invalid hidden-file preference.')
         if method == "files.list":
             from .filetools import revision
             result = []
-            with self.directory(root, path) as fd:
+            with self.directory(root, path, hidden) as fd:
                 for name in sorted(os.listdir(fd))[:1000]:
-                    if name.startswith("."):
+                    if not self.file_name(name, hidden):
                         continue
-                    st = os.stat(name, dir_fd=fd, follow_symlinks=False)
+                    try:
+                        st = os.stat(name, dir_fd=fd, follow_symlinks=False)
+                    except FileNotFoundError:
+                        continue
                     if stat.S_ISREG(st.st_mode) or stat.S_ISDIR(st.st_mode):
                         result.append({"name": name, "directory": stat.S_ISDIR(st.st_mode), "bytes": st.st_size, "modified": int(st.st_mtime), "revision": revision(st)})
             return {"files": result}
-        folder, name = self.file_parts(path)
-        with self.directory(root, folder) as fd:
+        folder, name = self.file_parts(path, hidden)
+        with self.directory(root, folder, hidden) as fd:
             if method == "files.mkdir":
                 self.check_entry_limit(root)
                 try:
@@ -571,7 +617,7 @@ class Engine:
                 content = data.get("content")
                 if not isinstance(content, str) or len(content.encode()) > FILE_MAX:
                     raise Fault("The editor supports files up to 256 KB.")
-                encoded, old_size = content.encode(), 0
+                encoded, old_size, old_mode = content.encode(), 0, None
                 try:
                     file_fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
                 except FileNotFoundError:
@@ -588,6 +634,7 @@ class Engine:
                             raise Fault("This file cannot be edited.")
                         old = stream.read(FILE_MAX + 1)
                         old_size = len(old)
+                        old_mode = stat.S_IMODE(st.st_mode) & 0o755
                     if data.get("revision") != hashlib.sha256(old).hexdigest():
                         raise Fault("The file changed since you opened it. Reopen before saving.", 409)
                 owner = db.execute("SELECT storage_mb FROM users WHERE id=?", (site["user_id"],)).fetchone()
@@ -602,7 +649,12 @@ class Engine:
                         os.fsync(stream.fileno())
                     os.chmod(temporary, 0o644, dir_fd=fd, follow_symlinks=False)
                     self.file_owner(db, site, fd, temporary)
-                    os.replace(temporary, name, src_dir_fd=fd, dst_dir_fd=fd)
+                    if old_mode is not None:
+                        os.chmod(temporary, old_mode, dir_fd=fd, follow_symlinks=False)
+                        os.replace(temporary, name, src_dir_fd=fd, dst_dir_fd=fd)
+                    else:
+                        from .filetools import rename_new
+                        rename_new(fd, temporary, fd, name)
                 finally:
                     with contextlib.suppress(FileNotFoundError):
                         os.unlink(temporary, dir_fd=fd)
@@ -844,5 +896,5 @@ class Engine:
                 "counts": {"sites": count, "active": active, "accounts": db.execute("SELECT COUNT(*) FROM users WHERE role='customer' AND is_reseller=0" + (" AND parent_id=?" if actor['role']=='reseller' else ''), (actor['id'],) if actor['role']=='reseller' else ()).fetchone()[0] if actor['role'] in ('admin','reseller') else None},
                 "features": self.distribution.features(db, actor), "reseller_pool": self.distribution.usage(db, actor) if actor["role"] == "reseller" else None,
                 "services": services, "usage_bytes": self.account_usage(db, actor["id"]),
-                "capabilities": (["Isolated customer storage and processes", "PHP 8.3", "Private MariaDB databases", "WordPress installer", "Customer domain HTTPS", "Local files and database backup/restore"] if self.hosting.enabled else []) + ["DNS zone editor, export and private authoritative preview", "Public TXT domain ownership checks", "Reseller accounts and delegated customers", "Hosting plans and reserved allowances", "Owner locks and scoped reseller access", "Sign-in and account ownership", "Customer panel accounts", "Static websites", "Text file editor", "Site suspension", "File storage allowances", "Site export downloads", "Audit history"],
+                "capabilities": (["Isolated customer storage and processes", "PHP 8.3", "Private MariaDB databases", "WordPress installer", "Customer domain HTTPS", "Local files and database backup/restore"] if self.hosting.enabled else []) + ["Active-session inventory and remote revocation", "Authenticator app and single-use recovery codes", "Password policy, resets and forced rotation", "Contact editing and scoped account search", "Selected-account access and plan changes", "Folder copy, batch actions and recoverable trash", "Hidden-file controls and permission editing", "Bounded ZIP creation and safe extraction", "DNS zone editor, export and private authoritative preview", "Public TXT domain ownership checks", "Reseller accounts and delegated customers", "Hosting plans and reserved allowances", "Owner locks and scoped reseller access", "Sign-in and account ownership", "Customer panel accounts", "Static websites", "Text file editor", "Site suspension", "File storage allowances", "Site export downloads", "Audit history"],
                 "planned": ["Public mail service", "Public DNS delegation", "Nested resellers and white-label branding", "Shell and application runtimes", "Scheduled and off-server backups", "Billing and AI integrations"]}

@@ -6,13 +6,20 @@ scope. Customers cannot name another account's storage. Every change requires
 the current session and CSRF verification, and pauses while a hosting job is
 using that customer volume.
 
+**Unreleased additions:** folder copying, batch selection, recoverable trash,
+hidden-file controls, permission editing and ZIP creation/extraction. These are
+in the current source; the immutable 0.4.2 download contains the earlier subset.
+
 ## Transfers
 
 Upload and download regular files up to **32 MiB**, including binary files.
 Upload names use the same ASCII name rules as the editor: start with a letter
 or number, then letters, numbers, spaces, periods, dashes or underscores; at
-most 200 characters per component and 512 per relative path. Hidden names,
-absolute paths, backslashes, parent references and symbolic links are refused.
+most 200 characters per component and 512 per relative path. Enable **Show hidden
+files** to use dot names such as `.htaccess` or `.config`. Leading/trailing
+whitespace, reserved `.vectorcp-` names, absolute paths, backslashes, parent
+references and symbolic links are refused. Unsupported external filenames are
+excluded from listings instead of being silently mapped to another file.
 
 Uploads use sequential chunks of at most 256 KiB. A private, root-owned staging
 directory holds incomplete data, outside the served website and customer
@@ -46,9 +53,26 @@ The **Actions** control beside an entry provides:
 - Verified binary download and regular-file copy, up to 32 MiB.
 - Move or rename a regular file or folder within the same website. A folder
   move includes its contents. The destination parent must already exist.
+- Copy folders including their hidden contents: at most 32 MiB of file content,
+  1,000 entries and 32 nested levels. A private stage on the customer's filesystem
+  is published only after source-revision, quota and entry checks pass. Interrupted
+  copy stages are reclaimed on the next folder-copy request for that site.
+- Move a regular file or bounded folder into recoverable **Trash**, then restore
+  to the original or another relative path without replacing existing items.
 - Permanent removal of a regular file or empty directory. The interface
-  requires typing `REMOVE`; a nonempty directory is refused. This is not trash
-  or undo.
+  requires typing `REMOVE`; a nonempty directory is refused. Use Trash first
+  when you need recovery or permanent removal of a bounded folder tree.
+- Inspect and change permissions using the supported safe modes. The agent
+  refuses shared write and special privilege bits, and can normalize ownership
+  only to this website's customer. It accepts no operating-system UID or GID.
+  Restrictive permissions can stop a website from reading a file. Existing
+  editor/upload defaults apply to new files. Editing an existing file preserves
+  its read/execute restrictions and strips shared-write/special-privilege bits.
+
+Select up to 20 entries for **Selected…** copy, move or permanent removal. Each
+item is independently checked and reports its result. Completed items stay
+completed when another item fails; batch file changes are not a transaction.
+Selecting the same item twice, or a parent and its descendant together, is refused.
 
 Copies and moves atomically refuse existing destinations, including a competing
 website write. Entry revisions reject items changed since the list was loaded.
@@ -59,14 +83,54 @@ Operations use directory descriptors and refuse symbolic links and special files
 Copied/uploaded files receive the same customer identity and restrictive hosted
 permissions as files created in the text editor.
 
-Filename search is case insensitive and stays within one website. It excludes
-hidden entries and symbolic links, scans at most 12,000 entries and returns at
+Filename search is case insensitive and stays within one website. The hidden-file
+preference applies to browsing, search, editing and transfers; links are always
+excluded. Search scans at most 12,000 entries and returns at
 most 200 matches. The interface reports when this limit is reached. Folder
 browsing remains limited to 1,000 entries per listing.
 
-Recursive copying, batch selection, trash/undo, hidden-file controls, archive
-extraction, permission editing and FTP/SFTP accounts remain separate catalog
-items. An Actions dialog does not imply those workflows are implemented.
+## Recoverable trash
+
+Trash is outside the served `public` tree, in a root-only directory on the same
+customer filesystem. A durable metadata receipt is written before moving the
+payload. The filesystem move is the commit point; recovery does not depend on a
+second database transaction. The payload and its metadata count against file
+storage and entry allowances. Restoring an item does not consume another full
+copy of its contents. Static exports and website backups do not include trash.
+
+Each website may retain up to 100 entries, with a 32 MiB / 1,000-entry limit on
+each removed tree. Nothing is automatically expired. Restore refuses an existing
+destination and leaves the trash item intact on conflict. Permanent purge is a
+separate confirmed action and cannot be undone. Interrupted receipts without a
+payload are reclaimed when listing trash; existing public files are preserved.
+An interrupted purge can leave a smaller payload available for inspection/retry.
+
+## ZIP archives
+
+Create a standard ZIP from a regular file or bounded folder, including hidden
+contents, or extract a ZIP into a **new** website-relative folder. Sources remain
+unchanged and existing destinations are preserved. Both operations stage outside
+the public tree on the customer's filesystem, normalize customer ownership and
+publish only after checks succeed. The next archive request reclaims abandoned
+private archive stages for that site.
+
+This profile supports unencrypted stored/deflated ZIP entries, at most 32 MiB of
+ZIP input/output and total uncompressed file content, 1,000 entries including
+implicit folders, and 32 nested levels. The central directory is bounded before
+the ZIP parser allocates entry records. Multi-disk and ZIP64 end-record containers
+are refused. Other archive formats and encrypted archives remain separate work.
+
+Extraction refuses absolute/parent paths, backslashes, whitespace aliases,
+reserved names, NUL names, duplicates, file-as-folder conflicts, links and special
+files. CRC failure, quota exhaustion and source changes remove the private stage
+without publishing a partially extracted folder. Nested ZIP files stay ordinary
+files; extraction is not recursive. Archive permission/ownership metadata is
+replaced by the panel's safe customer defaults. The format is described by the
+[ZIP specification](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT);
+the implementation uses Python's standard `zipfile` module.
+
+FTP/SFTP accounts, image editing and recovery of selected files from saved backups
+remain separate catalog items.
 
 ## Internal operations
 
@@ -85,6 +149,17 @@ cookie and mutation CSRF header. They are not long-lived public API tokens.
 | `files.copy` / `files.move` | `path`, metadata `revision`, `destination` | `ok` |
 | `files.remove` | `path`, metadata `revision` | `ok` |
 | `files.search` | `query` | Scoped matches and `limited` flag |
+| `files.permissions` | `path` | Mode, revision, safe choices and account owner |
+| `files.chmod` | `path`, metadata `revision`, `mode` | Current mode and revision |
+| `files.batch` | `items` of path/revision, `operation`, destination folder when copying/moving | Per-item outcomes |
+| `files.trash` | `path`, metadata `revision` | Recoverable entry `id` |
+| `files.trash.list` | — | Scoped retained entries |
+| `files.trash.restore` | `id`, optional `destination` | `ok`; refuses conflicts |
+| `files.trash.purge` | `id` | `ok`; irreversible |
+| `files.archive.create` / `files.archive.extract` | `path`, metadata `revision`, `destination` | `ok`; bounded ZIP profile |
+
+File operations accept the Boolean `show_hidden` preference. It controls name
+visibility and explicit hidden-path access, not another tenant's authorization.
 
 Upload records belong to their initiating actor as well as the selected site.
 Even another manager of the site cannot claim that actor's staging record.

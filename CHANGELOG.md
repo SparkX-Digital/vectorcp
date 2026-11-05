@@ -7,7 +7,53 @@ checksums, versioning and publication rules.
 
 ## Unreleased
 
-No additional completed changes recorded.
+The current development-source version is 0.4.3. Published 0.4.2 archives remain
+unchanged; a 0.4.3 release archive has not yet been published.
+
+### Added
+
+- Own-device session inventory, individual/current/all-other revocation, bounded
+  active sessions and migration of existing sessions without changing the
+  original session table's four-column contract.
+- Time-based authenticator enrollment and verification, durable replay/attempt
+  checks and eight single-use recovery codes. Sign-in issues no session before
+  its required second factor succeeds. Protected changes verify current credentials.
+- Password policy, self-service password changes and scoped managed resets.
+  Temporary passwords restrict hosting tools until changed; password changes
+  revoke sessions and preserve the authenticator.
+- Contact editing, scoped server-side account search/filter/pagination, account
+  details and atomic selected-account access/plan changes.
+- Recursive folder copy including hidden contents, per-item batch copy/move/remove
+  results, hidden-file controls and safe permission/owner normalization.
+- Recoverable website trash on customer storage, collision-safe restore and
+  explicit permanent purge. Trash remains part of storage/entry accounting.
+- Standard ZIP creation/extraction using bounded private staging, pre-parser
+  metadata limits, safe paths, CRC checks, ownership normalization and no-overwrite
+  publication. Retain the existing interface's shared sizing and spacing.
+- An opt-in installed-service acceptance driver for disposable Linux guests;
+  see [ACCOUNT_SECURITY.md](ACCOUNT_SECURITY.md) and [FILE_MANAGER.md](FILE_MANAGER.md).
+
+### Fixed
+
+- Refuse whitespace path aliases and reserved temporary names throughout file
+  operations. Unsupported externally created names cannot silently select another file.
+- Preserve existing restrictive file permissions when saving text; new text files
+  atomically refuse destinations that appear while the save is in progress.
+- Check new-password equality only after verifying the current credential, so
+  password-change errors cannot bypass attempt limits to reveal a guessed password.
+- Keep public login names separate from internal security-attempt counters and
+  reclaim expired attempt records, preserving active blocks through restart.
+- Clear closed credential/recovery dialogs and cancel unconfirmed authenticator
+  enrollment when its setup dialog closes.
+
+### Limits
+
+- This section describes current source, not the immutable 0.4.2 download.
+- Authenticator secrets rely on root-only database/state permissions and are not
+  encrypted at rest. Email recovery/notifications and passkeys remain unfinished.
+- Folder/archive/trash operations have explicit bounds; file batches report
+  individual outcomes. Bulk website suspension, volume resizing, mail, public
+  DNS, migration and the wider catalog remain unfinished.
 
 ## 0.4.2 — 3 November 2026 · Development snapshot
 
