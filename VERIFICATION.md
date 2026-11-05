@@ -1,3 +1,80 @@
+# Unreleased 0.4.3 account, security and file workflow verification
+
+Verified 4 November 2026. This development source adds ten completed workflows;
+the catalog contains **253 workflows: 44 Available, 21 Partial and 188 Planned**.
+The immutable published 0.4.2 download is unchanged. The systems below describe
+current source, with the limits in [ACCOUNT_SECURITY.md](ACCOUNT_SECURITY.md)
+and [FILE_MANAGER.md](FILE_MANAGER.md), rather than full product parity.
+
+## Automated checks
+
+The final local Python 3.13 run passed **113 unittest executions** in 70.805
+seconds. Tests cover scoped sessions, revocation, authenticator/recovery replay,
+enrollment expiry and attempts, password policy/rotation, contact and account
+scope, atomic account batches, additive legacy-session migration, hidden paths,
+file permissions, no-overwrite text publication, recursive copy, per-item file
+batches, private trash/quota/restart receipts, and ZIP safety/limits/CRC failures.
+The published RFC authenticator vectors are checked. Test discovery retains an
+existing imported fixture class, so execution counts are not unique-test claims.
+JavaScript, Python, deployment shell syntax, source packaging and diff checks pass.
+
+Native Python 3.9.25 tests run on the same disposable AlmaLinux 9.8 x86-64 guest
+used for the 0.4.2 acceptance below. The complete final suite passed 113 executions in 111.296 seconds; the affected
+security, file, archive and trash groups also passed during review. The guest remains in SELinux
+Enforcing mode; no host firewall or existing website configuration was changed.
+
+## Installed-service acceptance
+
+The actual upgrade helper moved the initialized native guest to source version
+0.4.3, preserving its existing owner session, customer sites and service layout.
+The opt-in [workflow acceptance driver](tests/acceptance_workflows_linux.py)
+passed all **13 installed-service checks**:
+
+- Existing sessions migrate into a private inventory; revocation takes effect.
+- Authenticator enrollment/recovery sign-in works without a provisional session.
+- Managed reset revokes sessions, preserves MFA, blocks tools until rotation,
+  and the chosen new password restores access.
+- Contact editing, account search and details remain scoped.
+- The installed unprivileged HTTP frontend issues a strict HTTP-only cookie only
+  after the required second factor succeeds.
+- Recursive copies include hidden contents, retain the correct customer Unix
+  identity, and can be read through the actual Nginx virtual host.
+- ZIP create/extract preserves hidden contents and rejects an unrelated customer.
+- Permission changes retain customer ownership; trash restore survives an actual
+  agent restart on the mounted customer volume.
+- Only newly created verification files are purged; the additional verification
+  account is locked, and enforcing SELinux remains active.
+
+The final private acceptance candidate was SHA-256
+`86f13bd006ae4df979e65662650b35b64c96e665208fe4945d1d577c4122bd3f`.
+All ten installed Python/frontend file SHA-256 values match this working tree. Publication adds this final evidence document without changing
+those tested runtime files. Private fixture credentials and customer configuration
+are excluded from the result summary and source. No stable release or independent
+security audit is claimed.
+
+## Interface checks
+
+The new Accounts, Account & security and File manager pages were measured at
+320, 390, 463, 768, 1280 and 1920 px. No document overflow or visible button below
+the shared 40 px desktop / 44 px phone minimum was observed. Temporary viewport
+overrides were cleared.
+
+Actual browser controls exercised account search/details/contact editing,
+remote session revocation, hidden-file editing, recursive copy, batch copy,
+trash/restore and ZIP create/extract. Existing-credential two-factor sign-in and
+the temporary-password tool gate were also verified. Credential changes and
+permanent purge used isolated backend/native fixtures; their browser dialogs
+were inspected without changing retained user credentials or deleting user data.
+
+The security review was performed by the implementing agent and added regression
+fixes for password-comparison errors, counter namespaces, text-save conflicts,
+permission preservation, ZIP creation/extraction limits and trash receipt sync
+ordering. It is not an independent audit. Wider production load, hostile live
+application races, power-loss/disaster recovery, secret encryption, mail/public
+DNS, migration, alternate platforms and the rest of the catalog remain unfinished.
+
+---
+
 # VectorCP 0.4.2 file operations and native installation verification
 
 Verified 3 November 2026. This remains a development snapshot. The catalog now
