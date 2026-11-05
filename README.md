@@ -53,6 +53,7 @@ See the [roadmap](ROADMAP.md) for the next capability gates.
   databases, jobs and backups. Owner locks and website holds take precedence.
 - Immutable customer/reseller packages, explicit assignment and retirement,
   inherited feature permissions and reserved customer/site/storage pools.
+- Selected website suspension/activation with individual outcomes and stopping on uncertain responses. See [BULK_OPERATIONS.md](BULK_OPERATIONS.md).
 - A DNS record editor for A, AAAA, CNAME, MX, TXT, NS, CAA and SRV records,
   private authoritative validation, zone export and public TXT ownership checks.
 
@@ -192,7 +193,11 @@ validation deliberately does not simulate successful Linux hosting operations.
 ```sh
 python3 dev.py --data /absolute/path/to/private/runtime
 python3 -m unittest discover -s tests -v
+node --test tests/test_site_batch.js
 ```
+
+The JavaScript regression command uses Node.js 18+ for development checks only;
+the panel does not require Node.js to run.
 
 To build a deterministic source-only ZIP and checksum outside the source tree:
 

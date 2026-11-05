@@ -7,8 +7,8 @@ authorization checks, recovery behavior and reproducible acceptance evidence.
 
 The [product specification](PRODUCT.md) defines the roles, installation contract
 and release gates. The [capability catalog](CAPABILITIES.md) breaks the full
-scope into customer, reseller and administrator workflows. Updated 4 November
-2026 with Unreleased account/security and file workflows. Demo
+scope into customer, reseller and administrator workflows. Updated 5 November
+2026 with Unreleased account/security, file and bulk website workflows. Demo
 screens reveal controls, but cannot establish undocumented behavior or prove
 that an action works on a real server.
 
@@ -36,7 +36,7 @@ evidence. Features can move between milestones when dependencies require it.
 | Authentication | Partial: authenticator/recovery codes, session management, password policy/rotation, CSRF and throttling. Email account recovery and passkeys pending. | Password hashing, rate limits, session controls, two-factor authentication and recovery | Session fixation, cross-site request forgery, brute-force and recovery tests |
 | Hierarchy | Partial: owner → reseller → customer. Collaborators/nested tiers pending. | Administrator, reseller, customer and collaborator scopes | Cross-account and cross-reseller requests refused in the backend |
 | Branding | Partial: original shared VectorCP identity. Reseller branding pending. | Original VectorCP interface plus reseller identity settings | Consistent branding across login, navigation, emails and reseller views |
-| Accounts | Partial: creation, contact editing, search/details, password resets and atomic selected-account access/plan changes. Termination, migration and bulk website suspension pending. | Creation, plan changes, suspension, restoration and termination | Idempotent jobs; ownership checks; protected system usernames; explicit destructive workflows |
+| Accounts | Partial: creation, contact editing, search/details, password resets and atomic selected-account access/plan changes and per-domain bulk website suspension/activation. Termination and migration pending. | Creation, plan changes, suspension, restoration and termination | Idempotent jobs; ownership checks; protected system usernames; explicit destructive workflows |
 | Plans | Partial: immutable packages and explicit assignment. Dynamic inherited updates pending. | Resource allowances and feature switches, inherited by existing accounts | Changing a plan updates actual enforcement and creation limits |
 | Reseller pools | Partial: reserved customer/site/storage allowances. Traffic and aggregate adjustable cgroups pending. | Shared disk, traffic, account, CPU, memory and process limits; overselling policies | Children cannot escape parent limits; accurate pool accounting and recovery from full pools |
 | Disk quotas | Partial: capped ext4 volumes. Inode ceilings/XFS integration pending. | Byte and inode ceilings on XFS and ext4 | Actual writes fail at limits; enforcement survives reboot |

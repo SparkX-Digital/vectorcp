@@ -16,7 +16,7 @@ const featureNames={php:'PHP',wordpress:'WordPress',databases:'Databases',tls:'H
 let state = {security:null,sessions:[],profile:null,accountFilters:{query:'',role:'all',status:'all',offset:0},accountTotal:0,plans:[],pool:null,dns:null,page:'overview', overview:null, sites:[], accounts:[], events:[], backups:[], jobs:[], databases:[], csrf:'', siteId:null, folder:'', file:null, revision:null};
 let setupToken = new URLSearchParams(location.hash.slice(1)).get('setup') || '';
 if(location.hash) history.replaceState(null,'',location.pathname);
-let toastTimer, toolQuery='', navigationBusy=false, pageRequest=0, transferBusy=false;
+let toastTimer, toolQuery='', navigationBusy=false, pageRequest=0, transferBusy=false, websiteBatchBusy=false;
 const workspaceName=()=>({admin:'Server administration',reseller:'Reseller management',customer:'Hosting workspace'}[state.overview?.user.role]||'Hosting workspace');
 function toolGroups(){
   const groups=[];
@@ -113,7 +113,17 @@ function actionButton(action,label,kind='primary',ico='plus'){return `<button cl
 function empty(title,body,action='',ico='sites'){return `<div class="empty">${icon(ico)}<strong>${title}</strong>${body}${action}</div>`;}
 function statusPill(status){return `<span class="pill ${status==='active'?'':'gray'}">${status==='active'?'Active':e(status)}</span>`;}
 function tableFilter(name){return `<div class="table-filter"><label for="filter-${name}">Filter ${name}</label><input id="filter-${name}" type="search" data-filter-table placeholder="Search visible ${name}…" autocomplete="off"><span class="filter-result" role="status"></span></div>`;}
-function siteRows(rows,compact=false){return `<div class="table-wrap"><table><thead><tr><th>Website</th>${compact?'':'<th>Owner</th>'}<th>Status</th><th></th></tr></thead><tbody>${rows.map(s=>`<tr><td><div class="domain-cell"><span class="site-icon">${icon('sites')}</span>${e(s.domain)}</div></td>${compact?'':`<td class="muted">${e(s.username)}</td>`}<td>${statusPill(s.status)}</td><td><div class="table-actions"><button class="quiet" data-action="open-hosting" data-id="${s.id}">Hosting</button><button class="quiet" data-action="open-files" data-id="${s.id}">Files ${icon('arrow')}</button>${compact || !managesCustomers()?'':`<button class="quiet" data-action="toggle-site" data-id="${s.id}" data-active="${s.status!=='active'}">${s.status==='active'?'Suspend':'Activate'}</button>`}</div></td></tr>`).join('')}</tbody></table></div>`;}
+function siteRows(rows,compact=false){
+  const selectable=!compact&&managesCustomers();
+  return `<div class="table-wrap"><table><thead><tr>${selectable?'<th>Select</th>':''}<th>Website</th>${compact?'':'<th>Owner</th>'}<th>Status</th><th></th></tr></thead><tbody>${rows.map(s=>`<tr>${selectable?`<td><label class="selection"><input type="checkbox" data-site-selection value="${s.id}" aria-label="Select ${e(s.domain)}"></label></td>`:''}<td><div class="domain-cell"><span class="site-icon">${icon('sites')}</span>${e(s.domain)}</div></td>${compact?'':`<td class="muted">${e(s.username)}</td>`}<td>${statusPill(s.status)}${s.admin_hold?' <span class="small muted">Owner hold</span>':''}</td><td><div class="table-actions"><button class="quiet" data-action="open-hosting" data-id="${s.id}">Hosting</button><button class="quiet" data-action="open-files" data-id="${s.id}">Files ${icon('arrow')}</button>${selectable?`<button class="quiet" data-action="toggle-site" data-id="${s.id}" data-active="${s.status!=='active'}">${s.status==='active'?'Suspend':'Activate'}</button>`:''}</div></td></tr>`).join('')}</tbody></table></div>`;
+}
+function websiteSelection(){
+  const count=document.querySelectorAll('[data-site-selection]:checked').length;
+  const label=document.querySelector('#website-selection-count'),button=document.querySelector('[data-action="bulk-websites"]');
+  if(label)label.textContent=`${count} selected · maximum 20`;
+  if(button)button.disabled=count===0;
+}
+
 const actionName = a => ({'copy':'File copied','move':'Item moved','remove':'Item removed','folder.copied':'Folder copied','file.uploaded':'File uploaded','file.trashed':'Item moved to trash','file.restored':'Item restored','file.trash_purged':'Trash item permanently removed','file.permissions_changed':'File permissions changed','archive.created':'ZIP created','archive.extracted':'ZIP extracted','account.updated':'Account details changed','profile.updated':'Contact details changed','session.revoked':'Session access revoked','password.changed':'Password changed','password.reset_required':'Temporary password set','two_factor.enrollment_started':'Authenticator setup started','two_factor.enabled':'Authenticator enabled','two_factor.disabled':'Authenticator disabled','two_factor.recovery_replaced':'Recovery codes replaced','accounts.bulk_lock':'Selected accounts locked','accounts.bulk_enable':'Selected accounts enabled','accounts.bulk_plan':'Selected account plans changed','site.created':'Website created','site.active':'Website activated','site.suspended':'Website suspended','file.saved':'File saved','folder.created':'Folder created','account.created':'Customer created','account.access_enabled':'Panel access enabled','account.access_locked':'Panel access locked','session.created':'Signed in','session.closed':'Signed out','administrator.created':'Administrator created','backup.created':'Site export created','backup.downloaded':'Site export downloaded'}[a]||a);
 const jobLabel=a=>({'hosting.enable':'Enable customer hosting','hosting.php':'Enable PHP','hosting.wordpress':'Install WordPress','hosting.tls':'Enable HTTPS','databases.create':'Create database','backups.full':'Create full backup','backups.restore':'Restore website'}[a]||a);
 function activity(rows){return rows.length?rows.map(a=>`<div class="activity-item"><span class="activity-dot"></span><div><strong>${e(actionName(a.action))}</strong><small>${e(a.target)} · ${e(a.actor)}</small></div><time>${e(date(a.created))}</time></div>`).join(''):empty('A fresh start','Your workspace activity will appear here.','','audit');}
@@ -141,7 +151,7 @@ function render(){
     html=heading('Tools',managesCustomers()?'Manage hosting accounts, websites and server operations.':'Manage your websites, files, applications and backups.');
     html+=`<div class="tools-layout"><div class="tools-main"><div class="directory-caption"><h2 id="tool-results" aria-live="polite">Available tools</h2><button class="quiet" data-action="clear-search">Show all tools</button></div>${toolDirectory()}<p class="note-line">This development workspace contains implemented tools. <a href="https://vectorcp.net/docs/capabilities/" target="_blank" rel="noopener noreferrer">View the full capability catalog ↗</a> for partial and planned systems, including email and public DNS.</p><section class="panel"><div class="panel-head"><h2>Recent activity</h2><button class="quiet" data-page="audit">View all ${icon('arrow')}</button></div>${activity(state.events.slice(0,3))}</section></div><aside class="workspace-information" aria-label="Workspace information"><section class="panel"><div class="panel-head"><h2>${managesCustomers()?'Server information':'General information'}</h2></div><dl class="information-list"><div><dt>Current user</dt><dd>${e(o.user.username)}</dd></div><div><dt>Access level</dt><dd>${e(o.user.role==='admin'?'Server owner':o.user.role)}</dd></div><div><dt>${managesCustomers()?'Hostname':'Primary website'}</dt><dd>${e(managesCustomers()?o.host.hostname:(state.sites[0]?.domain||'No websites yet'))}</dd></div>${managesCustomers()?`<div><dt>Operating system</dt><dd>${e(o.host.os)}</dd></div>`:''}<div><dt>Server address</dt><dd class="mono">${e(o.public_ipv4||'Not configured')}</dd></div><div><dt>Release</dt><dd>${e(o.version)} <span class="muted">· Development</span></dd></div></dl></section><section class="panel"><div class="panel-head"><h2>${managesCustomers()?'Server statistics':'Account statistics'}</h2></div><div class="panel-body"><div class="health-row"><span>Websites</span><strong>${o.counts.sites}${!managesCustomers()?' / '+o.user.site_limit:''}</strong></div><div class="health-row"><span>Active websites</span><strong>${o.counts.active}</strong></div>${managesCustomers()?`<div class="health-row"><span>Customers</span><strong>${o.counts.accounts}</strong></div>`:''}<div class="resource-line"><span>Website files</span><strong>${bytes(o.usage_bytes)}</strong></div>${managesCustomers()?`<hr><div class="resource-line"><span>Host disk used</span><strong>${percent}%</strong></div><progress class="progress" max="100" value="${percent}" aria-label="Host disk used"></progress><p class="small muted">${bytes(disk.used)} / ${bytes(disk.total)}</p><div class="resource-line"><span>Host memory used</span><strong>${memory?.total?Math.round((1-memory.available/memory.total)*100)+'%':'Unavailable'}</strong></div><progress class="progress" max="100" value="${memory?.total?Math.round((1-memory.available/memory.total)*100):0}" aria-label="Host memory used"></progress><div class="health-row"><span>1-minute load</span><strong>${o.host.load[0].toFixed(2)} / ${o.host.cpus} cores</strong></div><p class="small muted">Observed host measurements.</p>`:''}</div></section></aside></div>`;
   }else if(state.page==='sites'){
-    html=heading('Websites & domains','Domains, website status and the people who own them.',actionButton('new-site','Add website'))+`<section class="panel"><div class="panel-head"><h2>All websites</h2><span class="badge-counter">${state.sites.length} total</span></div>${state.sites.length?tableFilter('websites')+siteRows(state.sites):empty('Your first website starts here.','Create a website, then point its domain to your server.',actionButton('new-site','Add website','secondary'))}</section><p class="note-line">Point each domain’s A record to ${e(o.public_ipv4||'the configured server IP')}. Apps & databases provides PHP, WordPress and HTTPS for isolated customers. Suspending a website returns HTTP 503.</p>`;
+    html=heading('Websites & domains','Domains, website status and the people who own them.',actionButton('new-site','Add website'))+`<section class="panel"><div class="panel-head"><h2>All websites</h2><span class="badge-counter">${state.sites.length} total</span></div>${state.sites.length?tableFilter('websites')+(managesCustomers()?'<div class="file-toolbar"><span id="website-selection-count" role="status">0 selected · maximum 20</span><button class="secondary" data-action="bulk-websites" disabled>Change selected websites…</button></div>':'')+siteRows(state.sites):empty('Your first website starts here.','Create a website, then point its domain to your server.',actionButton('new-site','Add website','secondary'))}</section><p class="note-line">Point each domain’s A record to ${e(o.public_ipv4||'the configured server IP')}. Apps & databases provides PHP, WordPress and HTTPS for isolated customers. Suspending a website returns HTTP 503.</p>`;
   }else if(state.page==='security'){
     html=securityPage();
   }else if(state.page==='accounts'){
@@ -247,7 +257,7 @@ async function downloadFile(siteId,path){
   if(await sha256(await blob.arrayBuffer())!==info.sha256)throw new Error('Download verification failed. Please retry.');
   saveDownload(blob,path.split('/').pop());notify('File downloaded and checksum verified.');
 }
-modal.addEventListener('cancel',event=>{if(transferBusy){event.preventDefault();return;}const form=modal.querySelector('form');if(form?.dataset.uploadId)api('files.upload.cancel',{site_id:Number(form.dataset.siteId),id:form.dataset.uploadId}).catch(()=>{});event.preventDefault();closeModal();});
+modal.addEventListener('cancel',event=>{if(transferBusy||websiteBatchBusy){event.preventDefault();return;}const form=modal.querySelector('form');if(form?.dataset.uploadId)api('files.upload.cancel',{site_id:Number(form.dataset.siteId),id:form.dataset.uploadId}).catch(()=>{});event.preventDefault();closeModal();});
 document.addEventListener('click',async event=>{
   const button=event.target.closest('button');if(!button)return;
   try{
@@ -258,10 +268,18 @@ document.addEventListener('click',async event=>{
     if(action==='toggle-group'){const body=document.getElementById(button.getAttribute('aria-controls'));body.hidden=!body.hidden;button.setAttribute('aria-expanded',String(!body.hidden));return;}
     if(action==='clear-search'){toolQuery='';document.querySelector('#tool-search').value='';document.querySelectorAll('.tool-grid').forEach(g=>g.hidden=false);document.querySelectorAll('.group-toggle').forEach(b=>b.setAttribute('aria-expanded','true'));filterTools();return;}
     if(action==='auth-toggle'){auth(button.dataset.setup==='true');return;}
-    if(action==='close-modal'){if(transferBusy){notify('Wait for the current transfer request to finish.');return;}const form=modal.querySelector('form');if(form?.dataset.uploadId)api('files.upload.cancel',{site_id:Number(form.dataset.siteId),id:form.dataset.uploadId}).catch(()=>{});closeModal();return;}
+    if(action==='close-modal'){if(transferBusy||websiteBatchBusy){notify('Wait for the current operation to finish.');return;}const form=modal.querySelector('form');if(form?.dataset.uploadId)api('files.upload.cancel',{site_id:Number(form.dataset.siteId),id:form.dataset.uploadId}).catch(()=>{});closeModal();return;}
     if(action==='refresh'){await loadPage();notify('Workspace refreshed.');return;}
     if(action==='logout'){await api('logout');auth();return;}
     if(action==='account-previous'||action==='account-next'){state.accountFilters.offset=Math.max(0,state.accountFilters.offset+(action==='account-next'?50:-50));await loadPage('accounts');return;}
+    if(action==='bulk-websites'){
+      if(!managesCustomers())throw new Error('Administrator or reseller access is required.');
+      const ids=[...document.querySelectorAll('[data-site-selection]:checked')].map(x=>Number(x.value));
+      if(!ids.length||ids.length>20)throw new Error('Choose between 1 and 20 websites.');
+      const sites=ids.map(id=>state.sites.find(s=>s.id===id));
+      if(sites.some(s=>!s))throw new Error('Refresh the website list before continuing.');
+      showModal('Change selected websites','Review the selected domains before applying the change.','bulk-websites',`<input type="hidden" name="ids" value="${e(JSON.stringify(ids))}"><label class="field">Website state<select name="operation"><option value="suspend">Suspend websites</option><option value="activate">Activate websites</option></select></label><ul>${sites.map(s=>`<li>${e(s.domain)}${s.admin_hold?' · Owner hold':''}</li>`).join('')}</ul><p>Suspended websites return HTTP 503. Panel access stays as it is. A reseller cannot reverse an owner hold.</p><p>Changes run one website at a time. Completed changes stay applied if another website is refused. A lost response stops the remaining changes; refresh the website status before retrying.</p><p id="website-batch-progress" role="status" aria-live="polite"></p>`,'Apply website changes');return;
+    }
     if(action==='bulk-accounts'){
       const ids=[...document.querySelectorAll('[data-account-selection]:checked')].map(x=>Number(x.value));
       if(!ids.length){notify('Select at least one account.',true);return;}
@@ -409,7 +427,7 @@ document.addEventListener('click',async event=>{
   }catch(err){if(err.status===401&&state.overview)auth();notify(err.message,true);}finally{if(button.isConnected)button.disabled=false;}
 });
 document.addEventListener('input',event=>{
-  if(event.target.matches('[data-filter-table]')){const panel=event.target.closest('.panel'),rows=[...panel.querySelectorAll('tbody tr')],query=event.target.value.trim().toLowerCase();let visible=0;rows.forEach(row=>{row.hidden=!row.textContent.toLowerCase().includes(query);if(!row.hidden)visible++;});panel.querySelector('.filter-result').textContent=`${visible} of ${rows.length} shown`;return;}
+  if(event.target.matches('[data-filter-table]')){const panel=event.target.closest('.panel'),rows=[...panel.querySelectorAll('tbody tr')],query=event.target.value.trim().toLowerCase();let visible=0;rows.forEach(row=>{row.hidden=!row.textContent.toLowerCase().includes(query);if(!row.hidden)visible++;else row.querySelectorAll('[data-site-selection]').forEach(x=>x.checked=false);});panel.querySelector('.filter-result').textContent=`${visible} of ${rows.length} shown`;websiteSelection();return;}
   if(event.target.id==='tool-search'){toolQuery=event.target.value;if(state.page==='overview')filterTools();}
 });
 document.addEventListener('keydown',event=>{
@@ -423,6 +441,7 @@ document.addEventListener('keydown',event=>{
 });
 matchMedia('(max-width: 760px)').addEventListener('change',()=>setNavigation(false));
 document.addEventListener('change',event=>{
+  if(event.target.matches('[data-site-selection]')){websiteSelection();return;}
   if(event.target.id==='file-batch-operation'){const remove=event.target.value==='remove';document.querySelector('#file-batch-destination').hidden=remove;document.querySelector('#file-batch-confirm').hidden=!remove;modal.querySelector('button[type="submit"]').className=remove?'danger':'primary';}
   if(event.target.id==='show-hidden'){state.showHidden=event.target.checked;if(!state.showHidden&&state.folder.split('/').some(x=>x.startsWith('.'))){state.folder='';state.file=null;}render();return;}
   if(event.target.id==='bulk-operation')document.querySelector('#bulk-plan-field').hidden=event.target.value!=='plan';
@@ -441,6 +460,20 @@ document.addEventListener('submit',async event=>{
     if(kind==='login'||kind==='bootstrap'){if(kind==='login'&&['/admin','/reseller','/customer'].includes(location.pathname))data.entry=location.pathname.slice(1);const result=await api(kind,data);if(result.mfa_required){const field=form.querySelector('#login-factor');field.hidden=false;field.querySelector('input').required=true;field.querySelector('input').focus();return;}form.reset();state.csrf=result.csrf;setupToken='';await loadPage('overview');return;}
     if(kind==='close-details'){closeModal();return;}
     if(kind==='edit-account'){await api('accounts.update',{id:Number(data.id),name:data.name,contact_email:data.contact_email});closeModal();await loadPage();notify('Account details saved.');return;}
+    if(kind==='bulk-websites'){
+      const ids=JSON.parse(data.ids),active=data.operation==='activate';
+      if(!managesCustomers()||!['activate','suspend'].includes(data.operation))throw new Error('Choose a permitted website state.');
+      const sites=ids.map(id=>state.sites.find(s=>s.id===id));let results;
+      websiteBatchBusy=true;modal.querySelectorAll('button,select').forEach(x=>x.disabled=true);
+      try{
+        results=await runWebsiteBatch(sites,active,payload=>api('sites.active',payload),(site,done,total)=>{
+          form.querySelector('#website-batch-progress').textContent=`${active?'Activating':'Suspending'} ${site.domain} · ${done+1} of ${total}`;
+        });
+      }finally{websiteBatchBusy=false;modal.querySelectorAll('button,select').forEach(x=>x.disabled=false);}
+      closeModal();let refreshFailed=false;
+      try{await loadPage('sites');}catch(err){refreshFailed=true;}
+      showModal('Website change results','Completed changes stay applied. Review every result before retrying.','close-details',`${refreshFailed?'<p role="alert">The website list could not be refreshed. Review these results, then refresh the page.</p>':''}${results.map(r=>`<div class="batch-result"><strong>${e(r.domain)}</strong><span>${e(r.message)}</span></div>`).join('')}`,'Close');return;
+    }
     if(kind==='bulk-accounts'){await api('accounts.bulk',{ids:JSON.parse(data.ids),operation:data.operation,plan_id:data.plan_id?Number(data.plan_id):null});closeModal();await loadPage();notify('Selected accounts updated.');return;}
     if(kind==='reset-password'){await api('accounts.password',{...data,id:Number(data.id)});closeModal();await loadPage();notify('Temporary password set. Share it privately with the account owner.');return;}
     if(kind==='edit-profile'){await api('profile.update',data);closeModal();await loadPage();notify('Contact details saved.');return;}
@@ -505,6 +538,7 @@ document.addEventListener('submit',async event=>{
     closeModal();await loadPage();notify(kind==='site'?'Website created. Configure its DNS before visiting.':kind==='account'?'Customer account created.':'Site export created.');
   }catch(err){const box=form.querySelector('.form-error');if(box)box.textContent=err.message;}finally{if(button.isConnected)button.disabled=false;}
 });
+window.addEventListener('beforeunload',event=>{if(websiteBatchBusy){event.preventDefault();event.returnValue='';}});
 async function start(){try{await loadPage();}catch(err){if(err.status===401)auth(Boolean(setupToken));else{auth(Boolean(setupToken));notify(err.message,true);}}}
 setInterval(()=>{if(state.overview && ['hosting','backups','status'].includes(state.page) && state.jobs.some(j=>['queued','running'].includes(j.status)) && !modal.open)loadPage().catch(err=>notify(err.message,true));},5000);
 start();

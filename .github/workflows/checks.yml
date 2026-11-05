@@ -33,6 +33,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check vectorcp/static/app.js
+          node --test tests/test_site_batch.js
           bash -n deploy/install.sh
           bash -n deploy/hosting-install.sh
           bash -n deploy/dns-install.sh
