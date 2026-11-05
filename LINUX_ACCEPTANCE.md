@@ -30,6 +30,29 @@ its test records for inspection and does not erase the VM.
 
 ## Recovery and upgrade checks
 
+For the Unreleased account/security/file workflows, copy the reviewed source to
+the initialized disposable guest **before** upgrading. Its existing private
+`acceptance-context.json` must contain the generated owner credentials and
+isolated customer fixtures. Prepare a fresh owner session with the next source's
+driver, then upgrade and verify:
+
+```sh
+python3 tests/acceptance_workflows_linux.py --allow-disposable-host --before-upgrade
+python3 deploy/upgrade.py --check
+python3 deploy/upgrade.py --apply
+python3 tests/acceptance_workflows_linux.py --allow-disposable-host
+```
+
+The driver checks session migration/revocation, authenticator and recovery
+sign-in, forced password rotation, account details/search, the installed HTTP
+cookie flow, customer-owned folder copy, ZIP round-trip/scope, permissions and
+trash recovery through an actual agent restart. It purges only its newly created
+verification files and locks its additional verification account. The account
+and its reservation remain for inspection. The safe result summary and source
+file hashes are written to `security-acceptance-results.json` in root-only state.
+Use optional `--candidate-archive /path/to/reviewed-source.zip` to record its hash.
+Neither private context nor credentials belong in published source or logs.
+
 Record `/proc/sys/kernel/random/boot_id`, reboot only the disposable guest, and
 verify that the boot ID changes, both customer volumes remount, PHP/SQL and panel
 services recover, the retained customer sessions remain scoped and the `.test`
