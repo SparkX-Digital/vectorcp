@@ -13,16 +13,18 @@ from .agent import rpc
 from .core import Fault
 from .filetools import OPERATIONS as FILE_OPERATIONS
 from .security import OPERATIONS as SECURITY_OPERATIONS
+from .routing import OPERATIONS as ROUTING_OPERATIONS
 
 STATIC = Path(__file__).with_name("static")
 ROUTES = {"/admin": ("index.html", "text/html; charset=utf-8"), "/reseller": ("index.html", "text/html; charset=utf-8"), "/customer": ("index.html", "text/html; charset=utf-8"), "/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/site-batch.js": ("site-batch.js", "text/javascript; charset=utf-8"), "/style.css": ("style.css", "text/css; charset=utf-8"), "/favicon.svg": ("favicon.svg", "image/svg+xml"),
+          "/routing-form.js": ("routing-form.js", "text/javascript; charset=utf-8"),
           "/brand.svg": ("brand.svg", "image/svg+xml"), "/brand-light.svg": ("brand-light.svg", "image/svg+xml")}
 OPERATIONS = {"overview", "accounts.list", "accounts.create", "accounts.active", "sites.list", "sites.create", "sites.active",
               "files.list", "files.read", "files.write", "files.mkdir", "backups.list", "backups.create", "backups.download", "audit", "logout", "bootstrap", "login", "hosting.enable", "hosting.php", "hosting.wordpress", "hosting.tls", "databases.create", "databases.list", "databases.credentials", "jobs.list", "backups.full", "backups.restore", "backups.delete", "backups.describe", "backups.chunk", "plans.list", "plans.create", "plans.active", "plans.assign", "dns.list", "dns.create", "dns.save", "dns.delete", "dns.export", "dns.verify"}
 
 
-OPERATIONS |= FILE_OPERATIONS | SECURITY_OPERATIONS | {'accounts.inspect', 'accounts.update', 'accounts.bulk'}
+OPERATIONS |= FILE_OPERATIONS | SECURITY_OPERATIONS | ROUTING_OPERATIONS | {'accounts.inspect', 'accounts.update', 'accounts.bulk'}
 
 
 class Handler(BaseHTTPRequestHandler):

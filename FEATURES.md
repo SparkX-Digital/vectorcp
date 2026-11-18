@@ -7,8 +7,8 @@ authorization checks, recovery behavior and reproducible acceptance evidence.
 
 The [product specification](PRODUCT.md) defines the roles, installation contract
 and release gates. The [capability catalog](CAPABILITIES.md) breaks the full
-scope into customer, reseller and administrator workflows. Updated 5 November
-2026 with Unreleased account/security, file and bulk website workflows. Demo
+scope into customer, reseller and administrator workflows. Updated 18 November
+2026 with Unreleased account/security, file, bulk website and routing workflows. Demo
 screens reveal controls, but cannot establish undocumented behavior or prove
 that an action works on a real server.
 
@@ -44,7 +44,8 @@ evidence. Features can move between milestones when dependencies require it.
 | Usage and bandwidth | Planned; not implemented. | Usage reporting, monthly transfer accounting and over-limit behavior | Reset boundaries and restoration after plan upgrade; certificate renewal remains possible |
 | Web stacks | Planned; not implemented. | Nginx with Apache, and OpenLiteSpeed; preview and switch with rollback | Working sites checked before and after switching; failed switch restores prior stack |
 | Protocols | Planned; not implemented. | HTTPS, HTTP/2, HTTP/3 and automatic required network configuration | External protocol negotiation tests, including UDP/QUIC |
-| Domains | Partial: owned sites and suspension. Aliases/redirects/dedicated IPs pending. | Sites, aliases, subdomains, redirects, suspension and dedicated IP selection | Ownership validation; no conflicting names; expected virtual-host routing |
+| Domains | Partial: owned sites, suspension, bounded redirects/HTTPS preferences and static error pages. Aliases/dedicated IPs pending. | Sites, aliases, subdomains, redirects, suspension and dedicated IP selection | Ownership validation; no conflicting names; expected virtual-host routing |
+| Website routing | Available within [documented bounds](WEBSITE_ROUTING.md): 20 redirects, query/path options, HTTPS preference and static HTML error pages. | Permanent/temporary redirects, default/suspended/custom error pages | Scope/CSRF/stale-form checks; actual Nginx responses; failed-reload restoration |
 | PHP | Partial: isolated PHP 8.3. Version/extension/settings management pending. | Per-site versions, extensions, settings and per-account workers | Isolation between pools; setting validation; correct version served by each site |
 | Older PHP versions | Planned; not implemented. | Optional compatibility runtimes with a documented security-maintenance policy | Explicit supported-build policy and a demonstrable maintenance source before advertising support |
 | Page cache | Planned; not implemented. | Site-level enablement and purge; bypass of private and commerce pages | No personalized response leakage; cache invalidation tests |

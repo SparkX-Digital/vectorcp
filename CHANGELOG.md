@@ -12,6 +12,15 @@ unchanged; a 0.4.3 release archive has not yet been published.
 
 ### Added
 
+- Website redirect rules with exact/folder matching, permanent/temporary status,
+  query preservation and remaining-path options; an HTTPS preference that keeps
+  the certificate installed; and static HTML error pages for selected statuses.
+  Saves enforce ownership, account state, CSRF and revision checks, validate and
+  reload Nginx, and restore the previous configuration on failure. Suspended
+  websites override customer routing. See [WEBSITE_ROUTING.md](WEBSITE_ROUTING.md).
+- Opt-in real Nginx routing acceptance checks on separate loopback listeners in
+  an already marked disposable Linux guest.
+
 - Selected-website suspension and activation, bounded to 20 domains, with
   per-domain results, filter-aware selections, owner-hold enforcement and
   stopping without retries after uncertain responses.
