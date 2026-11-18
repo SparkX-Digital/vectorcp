@@ -64,13 +64,29 @@ class HttpBoundaryTests(unittest.TestCase):
             self.assertIn("frame-ancestors 'none'",headers['Content-Security-Policy'])
 
     def test_app_and_assets_have_csp_and_nosniff(self):
-        for path in ("/", "/app.js", "/site-batch.js", "/style.css", "/favicon.svg", "/brand.svg", "/brand-light.svg"):
+        for path in ("/", "/app.js", "/site-batch.js", "/routing-form.js", "/style.css", "/favicon.svg", "/brand.svg", "/brand-light.svg"):
             with self.subTest(path=path):
                 status, headers, body = self.request(path=path)
                 self.assertEqual(status, 200)
                 self.assertTrue(body)
                 self.assertIn("frame-ancestors 'none'", headers["Content-Security-Policy"])
                 self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
+
+    def test_routing_http_contract_persists_preferences_and_requires_csrf(self):
+        cookie,csrf,_=self.login()
+        headers={'Cookie':cookie,'X-CSRF-Token':csrf}
+        def api(method,data=None,custom=None):
+            status,_,body=self.request('POST','/api',{'method':method,'data':data or {}},custom or headers)
+            return status,json.loads(body)
+        status,site=api('sites.create',{'domain':'routing-http.example.com'})
+        self.assertEqual(status,200)
+        status,current=api('sites.routing.get',{'site_id':site['id']})
+        self.assertEqual(status,200);self.assertEqual(current['revision'],0)
+        update={'site_id':site['id'],'revision':0,'force_https':False,'redirects':[],'error_pages':{}}
+        self.assertEqual(api('sites.routing.save',update,{'Cookie':cookie})[0],403)
+        self.assertEqual(api('sites.routing.save',update)[0],200)
+        self.assertFalse(api('sites.routing.get',{'site_id':site['id']})[1]['force_https'])
+        self.assertEqual(api('sites.routing.save',update)[0],409)
 
     def test_private_paths_are_not_static_files(self):
         self.assertEqual(self.request(path="/../core.py")[0], 404)
