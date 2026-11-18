@@ -1,3 +1,40 @@
+# Unreleased 0.4.3 website routing follow-up
+
+Verified 18 November 2026. The catalog records **253 workflows: 47 Available,
+18 Partial and 188 Planned**. VCP-0504 and VCP-0505 now cover bounded website
+redirects, HTTPS preferences and static HTML error pages. See
+[WEBSITE_ROUTING.md](WEBSITE_ROUTING.md) for the supported behavior and limits.
+The immutable 0.4.2 public download remains unchanged.
+
+- All **124 Python unit/local HTTP executions** passed on Python 3.13 in
+  78.641 seconds. New checks cover ownership/CSRF/account locks, additive settings
+  migration, restart persistence, stale forms, suspension, malicious URLs/paths,
+  bounds and cycles, static file/symlink limits, failed Nginx test/reload rollback,
+  HTTPS preferences and the authenticated HTTP API contract.
+- Ten actual Nginx checks passed in the disposable AlmaLinux 9 acceptance guest
+  while SELinux remained enforcing: folder suffix/query handling, exact-rule
+  precedence, destination queries, custom 403/404/500 status preservation,
+  missing-file fallback, a replaced cross-site symlink, encoded header controls,
+  HTTPS preferences, suspension and an unrelated virtual host. These use the
+  opt-in standalone loopback driver and a self-signed fixture certificate.
+  This is routing execution evidence, not fresh installation, public TLS or
+  independent confinement/security acceptance for this revision.
+- Actual browser controls added a folder redirect and a custom 404 page, saved,
+  and reopened their persisted values. The new form uses the existing shared
+  layout and control scale. At **320, 390, 463, 768, 1280 and 1920 CSS pixels**,
+  neither the document nor dialog overflowed horizontally; dialog widths stayed
+  at or below 560 pixels. Visible buttons and text/select fields measured at least
+  44 pixels on phones and 40 pixels at larger widths. Temporary viewport overrides
+  were cleared. This verifies this form, not every screen/browser.
+- JavaScript syntax checks and the ten existing selected-website Node tests
+  passed. Public source packaging remains deterministic and excludes credentials.
+
+No existing live customer website or installed production panel was changed by
+this feature batch. Broad mail, public DNS, migration, database administration,
+release signing and the rest of the catalog remain unfinished.
+
+---
+
 # Unreleased 0.4.3 bulk website follow-up
 
 Verified 5 November 2026. The catalog now records **253 workflows: 45 Available,

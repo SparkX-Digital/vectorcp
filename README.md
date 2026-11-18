@@ -20,6 +20,10 @@ archives. These additions are not in the immutable 0.4.2 download. See the
 [changelog](CHANGELOG.md), [account/security guide](ACCOUNT_SECURITY.md) and
 [file-manager guide](FILE_MANAGER.md) for the tested scope and limits.
 
+The development source also includes [website routing](WEBSITE_ROUTING.md):
+bounded redirects, HTTPS preferences and static HTML error pages, with ownership
+checks, stale-form protection and Nginx validation/rollback.
+
 ## Project
 
 Maintained by [SparkX Digital](https://www.sparkxdigital.co.uk/).

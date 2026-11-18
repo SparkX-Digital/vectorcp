@@ -1,6 +1,6 @@
 # VectorCP capability catalog
 
-Updated 5 November 2026. This catalog defines the intended scope for a free,
+Updated 18 November 2026. This catalog defines the intended scope for a free,
 self-hosted hosting panel. It consolidates customer tools, reseller operations
 and server administration into original product requirements. It is not a
 claim that every tool is implemented.
@@ -122,8 +122,8 @@ reports per-domain outcomes; it stops on an uncertain response. See
 | VCP-0501 | Static websites and isolated PHP hosting | Available |
 | VCP-0502 | Owned domains and website document roots | Partial |
 | VCP-0503 | Subdomains, domain aliases and parked domains | Planned |
-| VCP-0504 | Permanent/temporary redirects and HTTPS preference | Partial |
-| VCP-0505 | Default, suspended and error pages | Partial |
+| VCP-0504 | Permanent/temporary redirects and HTTPS preference | Available |
+| VCP-0505 | Default, suspended and error pages | Available |
 | VCP-0506 | IPv4 and IPv6 serving and address changes | Partial |
 | VCP-0507 | Alternative web-server stacks and safe switching | Planned |
 | VCP-0508 | HTTP/2 and HTTP/3 negotiation | Planned |
@@ -134,6 +134,10 @@ reports per-domain outcomes; it stops on an uncertain response. See
 | VCP-0513 | Hotlink and credential-sharing controls | Planned |
 | VCP-0514 | Proxy-aware visitor address handling | Planned |
 | VCP-0515 | Optional visual website builder and exportable site output | Planned |
+
+Website routing is bounded to 20 validated redirect rules and static HTML error
+pages. See [WEBSITE_ROUTING.md](WEBSITE_ROUTING.md) for path handling, HTTPS
+preference, suspension precedence, failure recovery and acceptance scope.
 
 ## Certificates
 
