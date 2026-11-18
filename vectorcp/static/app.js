@@ -27,6 +27,7 @@ function toolGroups(){
     ['new-plan','Create hosting plan','Define a package for new or existing accounts.','add package quota','action']]});
   groups.push({title:'Websites & domains',icon:'sites',tools:[
     ['sites','Websites & domains','View domains, owners and website status.','domain suspend activate'],
+    ['sites','Redirects & error pages','Manage redirect rules, HTTPS preference and static error pages.','redirect permanent temporary 301 302 404 errors'],
     ['new-site','Create website','Add a domain to your hosting workspace.','add domain site','action'],
     ['dns','DNS zone editor','Validate and export a private DNS preview.','records nameserver zone ttl txt'],
     ['hosting','HTTPS certificates','Issue a domain certificate for an isolated website.','ssl tls acme certificate']]},
@@ -115,7 +116,7 @@ function statusPill(status){return `<span class="pill ${status==='active'?'':'gr
 function tableFilter(name){return `<div class="table-filter"><label for="filter-${name}">Filter ${name}</label><input id="filter-${name}" type="search" data-filter-table placeholder="Search visible ${name}…" autocomplete="off"><span class="filter-result" role="status"></span></div>`;}
 function siteRows(rows,compact=false){
   const selectable=!compact&&managesCustomers();
-  return `<div class="table-wrap"><table><thead><tr>${selectable?'<th>Select</th>':''}<th>Website</th>${compact?'':'<th>Owner</th>'}<th>Status</th><th></th></tr></thead><tbody>${rows.map(s=>`<tr>${selectable?`<td><label class="selection"><input type="checkbox" data-site-selection value="${s.id}" aria-label="Select ${e(s.domain)}"></label></td>`:''}<td><div class="domain-cell"><span class="site-icon">${icon('sites')}</span>${e(s.domain)}</div></td>${compact?'':`<td class="muted">${e(s.username)}</td>`}<td>${statusPill(s.status)}${s.admin_hold?' <span class="small muted">Owner hold</span>':''}</td><td><div class="table-actions"><button class="quiet" data-action="open-hosting" data-id="${s.id}">Hosting</button><button class="quiet" data-action="open-files" data-id="${s.id}">Files ${icon('arrow')}</button>${selectable?`<button class="quiet" data-action="toggle-site" data-id="${s.id}" data-active="${s.status!=='active'}">${s.status==='active'?'Suspend':'Activate'}</button>`:''}</div></td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="table-wrap"><table><thead><tr>${selectable?'<th>Select</th>':''}<th>Website</th>${compact?'':'<th>Owner</th>'}<th>Status</th><th></th></tr></thead><tbody>${rows.map(s=>`<tr>${selectable?`<td><label class="selection"><input type="checkbox" data-site-selection value="${s.id}" aria-label="Select ${e(s.domain)}"></label></td>`:''}<td><div class="domain-cell"><span class="site-icon">${icon('sites')}</span>${e(s.domain)}</div></td>${compact?'':`<td class="muted">${e(s.username)}</td>`}<td>${statusPill(s.status)}${s.admin_hold?' <span class="small muted">Owner hold</span>':''}</td><td><div class="table-actions"><button class="quiet" data-action="website-routing" data-id="${s.id}">Routing</button><button class="quiet" data-action="open-hosting" data-id="${s.id}">Hosting</button><button class="quiet" data-action="open-files" data-id="${s.id}">Files ${icon('arrow')}</button>${selectable?`<button class="quiet" data-action="toggle-site" data-id="${s.id}" data-active="${s.status!=='active'}">${s.status==='active'?'Suspend':'Activate'}</button>`:''}</div></td></tr>`).join('')}</tbody></table></div>`;
 }
 function websiteSelection(){
   const count=document.querySelectorAll('[data-site-selection]:checked').length;
@@ -336,6 +337,20 @@ document.addEventListener('click',async event=>{
     if(action==='verify-dns'){const r=await api('dns.verify',{site_id:state.siteId});await loadPage();notify(r.verified?'Public domain ownership verified.':'The matching TXT record was not found at your public DNS provider.',!r.verified);return;}
     if(action==='export-dns'){const r=await api('dns.export',{site_id:state.siteId});const u=URL.createObjectURL(new Blob([r.content],{type:'text/plain'}));const a=document.createElement('a');a.href=u;a.download=r.filename;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);notify('Zone export downloaded.');return;}
     if(action==='open-hosting'){state.siteId=Number(button.dataset.id);await loadPage('hosting');document.querySelector('#site-choice').value=state.siteId;return;}
+    if(action==='website-routing'){
+      const site=state.sites.find(s=>s.id===Number(button.dataset.id));
+      const config=await api('sites.routing.get',{site_id:site.id});
+      showModal('Website routing',e(site.domain),'routing-settings',VectorCPRoutingForm.body(config,e),'Save routing');
+      modal.querySelector('form').dataset.nextRule=String(config.redirects.length);
+      modal.querySelector('button[type="submit"]').disabled=!config.editable;return;
+    }
+    if(action==='add-routing-rule'){
+      const form=button.closest('form'),rows=form.querySelectorAll('[data-routing-rule]');
+      if(rows.length>=20){notify('Use at most 20 redirects per website.',true);return;}
+      const index=Number(form.dataset.nextRule||0);form.dataset.nextRule=String(index+1);
+      form.querySelector('#routing-rules').insertAdjacentHTML('beforeend',VectorCPRoutingForm.rule(index,{path:'/old/',match:'prefix',target:'',code:301,keep_query:true,append_path:true},e));return;
+    }
+    if(action==='remove-routing-rule'){button.closest('[data-routing-rule]').remove();return;}
     if(action==='enable-hosting'){
       const a=state.accounts.find(a=>a.id===Number(button.dataset.id));
       showModal('Enable customer hosting','Provision a fixed storage volume and isolated application services.','hosting-enable',`<input type="hidden" name="id" value="${Number(button.dataset.id)}">`+field('Hosting storage (MB)','storage_mb',{type:'number',value:a.plan_id?a.storage_mb:1024,attrs:'min="512" max="4096" '+(a.plan_id?'readonly':''),help:'Includes website files, the database and temporary application data. The volume size is fixed in this release.'}),'Enable hosting');return;
@@ -531,6 +546,7 @@ document.addEventListener('submit',async event=>{
     if(kind==='assign-plan'){await api('plans.assign',{id:Number(data.id),plan_id:Number(data.plan_id)});closeModal();await loadPage();notify('Hosting plan assigned.');return;}
     if(kind==='dns'||kind==='delete-dns'){data.site_id=state.siteId;if(kind==='dns')data.ttl=Number(data.ttl);else data.id=Number(data.id);await api(kind==='dns'?'dns.save':'dns.delete',data);closeModal();await loadPage();notify('Private DNS zone updated.');return;}
     if(kind==='site'){if(data.user_id)data.user_id=Number(data.user_id);await api('sites.create',data);}
+    if(kind==='routing-settings'){await api('sites.routing.save',VectorCPRoutingForm.read(form));closeModal();notify('Website routing saved.');return;}
     if(kind==='account'){data.plan_id=Number(data.plan_id);await api('accounts.create',data);}
     if(kind==='folder'){await api('files.mkdir',{site_id:state.siteId,path:[state.folder,data.name].filter(Boolean).join('/')});closeModal();await loadFiles();notify('Folder created.');return;}
     if(kind==='file'){const path=[state.folder,data.name].filter(Boolean).join('/');await api('files.write',{site_id:state.siteId,path,content:'',revision:'new'});closeModal();const saved=await api('files.read',{site_id:state.siteId,path});await loadFiles();editFile(path,saved.content,saved.revision);notify('File created.');return;}
