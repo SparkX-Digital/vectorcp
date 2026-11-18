@@ -169,6 +169,10 @@ class Engine:
         self.trash = Trash(self)
         from .archives import Archives
         self.archives = Archives(self)
+        from .routing import Routing, migrate as migrate_routing
+        with self.db() as db:
+            migrate_routing(db)
+        self.routing = Routing(self)
         os.chmod(self.db_path, 0o600)
 
     @contextlib.contextmanager
@@ -286,13 +290,14 @@ class Engine:
             return self.bootstrap(data, request.get('client', ''))
         from .filetools import OPERATIONS as file_operations, READ_ONLY as file_reads
         from .security import OPERATIONS as security_operations, READ_ONLY as security_reads
+        from .routing import OPERATIONS as routing_operations
         allowed = {"overview", "accounts.list", "accounts.create", "accounts.active", "sites.list", "sites.create", "sites.active",
                    "files.list", "files.read", "files.write", "files.mkdir", "backups.list", "backups.create", "backups.download", "audit", "logout", "hosting.enable", "hosting.php", "hosting.wordpress", "hosting.tls", "databases.create", "databases.list", "databases.credentials", "jobs.list", "backups.full", "backups.restore", "backups.delete", "backups.describe", "backups.chunk", "plans.list", "plans.create", "plans.active", "plans.assign", "dns.list", "dns.create", "dns.save", "dns.delete", "dns.export", "dns.verify"}
-        allowed |= file_operations | security_operations | {'accounts.inspect', 'accounts.update', 'accounts.bulk'}
+        allowed |= file_operations | security_operations | routing_operations | {'accounts.inspect', 'accounts.update', 'accounts.bulk'}
         if method not in allowed:
             raise Fault("Unknown operation.", 404)
         read_only = method in {"overview", "accounts.list", "sites.list", "files.list", "files.read", "backups.list", "backups.download", "audit", "jobs.list", "databases.list", "databases.credentials", "backups.describe", "backups.chunk", "plans.list", "dns.list", "dns.export"}
-        read_only = read_only or method in file_reads | security_reads | {'accounts.inspect'}
+        read_only = read_only or method in file_reads | security_reads | {'accounts.inspect', 'sites.routing.get'}
         with self.lock, self.db() as db:
             actor = self.authenticate(db, request.get("token"))
             if actor['password_change_required'] and method not in {'overview', 'security.status', 'security.password', 'logout'}:
@@ -340,6 +345,8 @@ class Engine:
                 return self.backup(db, actor, method, data)
             site = self.owned_site(db, actor, data.get("site_id"))
             self.site_idle(db, site)
+            if method in routing_operations:
+                return self.routing.dispatch(db, actor, site, method, data)
             if method in file_operations:
                 return self.filetools.dispatch(db, actor, site, method, data)
             if method == 'databases.credentials':
@@ -456,7 +463,7 @@ class Engine:
         self.log(db, actor, "site.created", domain)
         return {"ok": True, "id": site["id"]}
 
-    def publish_config(self, site, status):
+    def publish_config(self, site, status, routing=None):
         if self.development:
             return
         if not self.nginx:
@@ -476,7 +483,10 @@ class Engine:
                   'location ~* \\.(sql|ini|log|bak|old|swp)$ { return 403; }\n'
                   'location ~* ^/wp-content/uploads/.*\\.(php|phtml|phar)(/|$) { return 403; }\n') % root
         if status != 'active':
-            serving = 'location / { return 503; }\nlocation ~ \\.php$ { return 503; }\n'
+            serving = ('location / { default_type text/html; return 503 "<!doctype html><html lang=en><meta charset=utf-8>'
+                       '<meta name=viewport content=width=device-width,initial-scale=1><title>Website suspended</title>'
+                       '<h1>Website suspended</h1><p>Please contact the website administrator.</p></html>"; }\n'
+                       'location ~ \\.php$ { return 503; }\n')
         elif php:
             with self.db() as db:
                 owner = db.execute('SELECT * FROM users WHERE id=?', (site['user_id'],)).fetchone()
@@ -491,9 +501,20 @@ class Engine:
         serving += 'location ~* \\.(php[0-9]*)(/|$) { return 403; }\n'
         serving += 'location ~* \\.(phtml|phar|cgi|pl|py|sh)(/|$) { return 403; }\n'
         tls = bool(site.get('tls'))
-        content = 'server {\nlisten 80;\nserver_name %s;\n%s' % (site['domain'], challenge)
+        from .routing import settings as routing_settings, render as render_routing
+        if routing is None:
+            with self.db() as db:
+                routing = routing_settings(db, site['id'])
+        maps, locations, root_redirect = render_routing(site, routing) if status == 'active' else ('', '', None)
+        if root_redirect:
+            serving = root_redirect + serving.split('\n', 1)[1]
+        common += locations
+        content = maps + 'server {\nlisten 80;\nserver_name %s;\n%s' % (site['domain'], challenge)
         if tls:
-            content += 'location / { return 308 https://%s$request_uri; }\n}\n' % site['domain']
+            if routing['force_https']:
+                content += 'location / { return 308 https://%s$request_uri; }\n}\n' % site['domain']
+            else:
+                content += common + serving + '}\n'
             content += ('server {\nlisten 443 ssl;\nserver_name %s;\nssl_certificate /etc/letsencrypt/live/vectorcp-site-%d/fullchain.pem;\n'
                         'ssl_certificate_key /etc/letsencrypt/live/vectorcp-site-%d/privkey.pem;\nssl_protocols TLSv1.2 TLSv1.3;\nssl_session_tickets off;\n') % (site['domain'], site['id'], site['id'])
             content += common + serving + '}\n'
@@ -896,5 +917,5 @@ class Engine:
                 "counts": {"sites": count, "active": active, "accounts": db.execute("SELECT COUNT(*) FROM users WHERE role='customer' AND is_reseller=0" + (" AND parent_id=?" if actor['role']=='reseller' else ''), (actor['id'],) if actor['role']=='reseller' else ()).fetchone()[0] if actor['role'] in ('admin','reseller') else None},
                 "features": self.distribution.features(db, actor), "reseller_pool": self.distribution.usage(db, actor) if actor["role"] == "reseller" else None,
                 "services": services, "usage_bytes": self.account_usage(db, actor["id"]),
-                "capabilities": (["Isolated customer storage and processes", "PHP 8.3", "Private MariaDB databases", "WordPress installer", "Customer domain HTTPS", "Local files and database backup/restore"] if self.hosting.enabled else []) + ["Active-session inventory and remote revocation", "Authenticator app and single-use recovery codes", "Password policy, resets and forced rotation", "Contact editing and scoped account search", "Selected-account access and plan changes", "Folder copy, batch actions and recoverable trash", "Hidden-file controls and permission editing", "Bounded ZIP creation and safe extraction", "DNS zone editor, export and private authoritative preview", "Public TXT domain ownership checks", "Reseller accounts and delegated customers", "Hosting plans and reserved allowances", "Owner locks and scoped reseller access", "Sign-in and account ownership", "Customer panel accounts", "Static websites", "Text file editor", "Site suspension", "File storage allowances", "Site export downloads", "Audit history"],
+                "capabilities": (["Isolated customer storage and processes", "PHP 8.3", "Private MariaDB databases", "WordPress installer", "Customer domain HTTPS", "Local files and database backup/restore"] if self.hosting.enabled else []) + ["Website redirects, HTTPS preference and static error pages", "Active-session inventory and remote revocation", "Authenticator app and single-use recovery codes", "Password policy, resets and forced rotation", "Contact editing and scoped account search", "Selected-account access and plan changes", "Folder copy, batch actions and recoverable trash", "Hidden-file controls and permission editing", "Bounded ZIP creation and safe extraction", "DNS zone editor, export and private authoritative preview", "Public TXT domain ownership checks", "Reseller accounts and delegated customers", "Hosting plans and reserved allowances", "Owner locks and scoped reseller access", "Sign-in and account ownership", "Customer panel accounts", "Static websites", "Text file editor", "Site suspension", "File storage allowances", "Site export downloads", "Audit history"],
                 "planned": ["Public mail service", "Public DNS delegation", "Nested resellers and white-label branding", "Shell and application runtimes", "Scheduled and off-server backups", "Billing and AI integrations"]}
