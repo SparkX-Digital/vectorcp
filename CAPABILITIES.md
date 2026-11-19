@@ -21,6 +21,10 @@ Unreleased database and recovery workflows are described in
 SQL import/export is bounded; the browser is read-only. SFTP is the only remote
 transport implemented. Monthly retention and configurable staging remain pending.
 
+The optional Unreleased public authoritative profile and its limits are described
+in [PUBLIC_DNS.md](PUBLIC_DNS.md). External delegation, DNSSEC, zone deletion,
+full consistency repair and independent nameserver recovery remain open.
+
 Stable IDs identify work items and acceptance evidence. A row is a user workflow,
 not necessarily a screen or a single development task. Read [PRODUCT.md](PRODUCT.md)
 for the installation contract and [ROADMAP.md](ROADMAP.md) for delivery order.
@@ -252,16 +256,16 @@ preference, suspension precedence, failure recovery and acceptance scope.
 | VCP-1001 | Record validation for A, AAAA, CNAME, MX, TXT, NS, CAA and SRV | Available |
 | VCP-1002 | Private authoritative preview and zone export | Available |
 | VCP-1003 | Public TXT ownership verification | Available |
-| VCP-1004 | Public authoritative DNS hosting | Planned |
+| VCP-1004 | Public authoritative DNS hosting | Partial |
 | VCP-1005 | Automatic site zones and mail records | Planned |
 | VCP-1006 | Zone templates and TTL management | Planned |
 | VCP-1007 | DNSSEC signing, DS guidance and safe key removal | Planned |
 | VCP-1008 | Dynamic DNS clients and scoped tokens | Planned |
-| VCP-1009 | DNS diagnostics and nameserver reports | Planned |
+| VCP-1009 | DNS diagnostics and nameserver reports | Partial |
 | VCP-1010 | DNS-only nodes and cluster replication | Planned |
 | VCP-1011 | External DNS record synchronization | Planned |
 | VCP-1012 | Proxy, TLS mode and external cache controls | Planned |
-| VCP-1013 | Zone deletion, cleanup, rebuild and consistency repair | Planned |
+| VCP-1013 | Zone deletion, cleanup, rebuild and consistency repair | Partial |
 
 ## PHP, apps and development
 

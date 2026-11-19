@@ -17,11 +17,13 @@ from .routing import OPERATIONS as ROUTING_OPERATIONS
 from .databases import OPERATIONS as DATABASE_OPERATIONS
 from .backup_policy import OPERATIONS as POLICY_OPERATIONS
 from .offsite import OPERATIONS as OFFSITE_OPERATIONS
+from .dns import OPERATIONS as DNS_OPERATIONS
 
 STATIC = Path(__file__).with_name("static")
 ROUTES = {"/admin": ("index.html", "text/html; charset=utf-8"), "/reseller": ("index.html", "text/html; charset=utf-8"), "/customer": ("index.html", "text/html; charset=utf-8"), "/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/site-batch.js": ("site-batch.js", "text/javascript; charset=utf-8"), "/style.css": ("style.css", "text/css; charset=utf-8"), "/favicon.svg": ("favicon.svg", "image/svg+xml"),
           "/data-tools.js": ("data-tools.js", "text/javascript; charset=utf-8"),
+          "/dns-tools.js": ("dns-tools.js", "text/javascript; charset=utf-8"),
           "/routing-form.js": ("routing-form.js", "text/javascript; charset=utf-8"),
           "/brand.svg": ("brand.svg", "image/svg+xml"), "/brand-light.svg": ("brand-light.svg", "image/svg+xml")}
 OPERATIONS = {"overview", "accounts.list", "accounts.create", "accounts.active", "sites.list", "sites.create", "sites.active",
@@ -31,6 +33,7 @@ OPERATIONS = {"overview", "accounts.list", "accounts.create", "accounts.active",
 OPERATIONS |= FILE_OPERATIONS | SECURITY_OPERATIONS | ROUTING_OPERATIONS | {'accounts.inspect', 'accounts.update', 'accounts.bulk'}
 OPERATIONS |= DATABASE_OPERATIONS | POLICY_OPERATIONS
 OPERATIONS |= OFFSITE_OPERATIONS
+OPERATIONS |= DNS_OPERATIONS
 
 
 class Handler(BaseHTTPRequestHandler):

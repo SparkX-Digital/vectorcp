@@ -64,13 +64,35 @@ class HttpBoundaryTests(unittest.TestCase):
             self.assertIn("frame-ancestors 'none'",headers['Content-Security-Policy'])
 
     def test_app_and_assets_have_csp_and_nosniff(self):
-        for path in ("/", "/app.js", "/site-batch.js", "/routing-form.js", "/data-tools.js", "/style.css", "/favicon.svg", "/brand.svg", "/brand-light.svg"):
+        for path in ("/", "/app.js", "/site-batch.js", "/routing-form.js", "/data-tools.js", "/dns-tools.js", "/style.css", "/favicon.svg", "/brand.svg", "/brand-light.svg"):
             with self.subTest(path=path):
                 status, headers, body = self.request(path=path)
                 self.assertEqual(status, 200)
                 self.assertTrue(body)
                 self.assertIn("frame-ancestors 'none'", headers["Content-Security-Policy"])
                 self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
+
+    def test_dns_edits_and_new_operations_use_the_authenticated_http_boundary(self):
+        cookie,csrf,_=self.login()
+        headers={'Cookie':cookie,'X-CSRF-Token':csrf}
+        def call(method,data,custom=headers):
+            status,_,body=self.request('POST','/api',{'method':method,'data':data},custom)
+            return status,json.loads(body)
+        status,data=call('sites.create',{'domain':'dns-http.example.com'})
+        self.assertEqual(status,200);sid=data['id']
+        self.assertEqual(call('dns.create',{'site_id':sid})[0],200)
+        status,info=call('dns.list',{'site_id':sid})
+        self.assertEqual(status,200);self.assertEqual(info['mode'],'private')
+        self.assertEqual(call('dns.save',{'site_id':sid,'name':'probe','type':'TXT','value':'<plain>','serial':info['zone']['serial']})[0],200)
+        _,info=call('dns.list',{'site_id':sid});record=next(r for r in info['records'] if r['name']=='probe')
+        payload={'site_id':sid,'id':record['id'],'name':'probe','type':'TXT','value':'<saved>','ttl':600,'serial':info['zone']['serial']}
+        self.assertEqual(call('dns.update',payload,{'Cookie':cookie,'X-CSRF-Token':'forged'})[0],403)
+        self.assertEqual(call('dns.update',payload)[0],200)
+        self.assertEqual(call('dns.update',payload)[0],409)
+        self.assertEqual(call('dns.diagnostics',{'site_id':sid})[0],200)
+        _,info=call('dns.list',{'site_id':sid})
+        self.assertEqual(call('dns.activate',{'site_id':sid,'serial':info['zone']['serial'],'confirm_domain':'dns-http.example.com'})[0],409)
+        self.assertEqual(call('dns.rebuild',{'site_id':sid,'serial':info['zone']['serial']})[0],200)
 
     def test_database_schedule_and_offsite_http_boundaries(self):
         cookie,csrf,_=self.login()

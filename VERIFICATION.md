@@ -1,3 +1,51 @@
+# Unreleased 0.4.3 public authoritative DNS follow-up
+
+Verified 19 November 2026. The development catalog records **253 workflows:
+50 Available, 24 Partial and 179 Planned**. Public DNS hosting, diagnostics and
+zone repair now have narrower implementations; none is promoted to complete
+public acceptance. The immutable 0.4.2 download is unchanged.
+
+- All **160 local Python 3.13 unit/HTTP checks** pass in 111.404 seconds, including
+  profile validation, migration without publication, draft exclusion, ownership,
+  CSRF, plan/account/job gates, record edits, stale forms, managed TXT, in-zone
+  nameserver addresses, serial wrap, failed-publication rollback and marker loss.
+  The ten Node regressions and JavaScript/shell syntax checks also pass.
+- Seven prepare groups pass with real BIND 9.16.23-40.el9_8.13 in the disposable
+  AlmaLinux 9 guest on Python 3.9. They cover explicit IPv4/IPv6 interface readiness
+  over UDP/TCP, unassigned-interface refusal, draft exclusion and a real failed
+  external ownership query; fixture-authorized activation, edits and reload
+  rollback; recursion/AXFR denial; refusing profile changes with active zones;
+  deactivation and invalid-profile rollback; retained maintenance on incomplete
+  recovery; and SELinux enforcing. The exact 29 installed runtime files match
+  the reviewed source. Normal application upgrades retain the test state.
+- An off-guest process queries the running service across the VM network boundary
+  through host-loopback forwarding. Both UDP and TCP return authoritative SOA
+  answers with the expected serial; edited A and configured NS answers match.
+  This is not an Internet port-53, parent/glue or real-domain delegation test.
+- The finish phase stops public hosting, keeps zone records, rebuilds private
+  previews and confirms them over UDP/TCP. Agent, web and DNS services recover;
+  the disposable harness preserves an initially active web frontend. Root-private
+  profile recovery copies are retained and SELinux remains enforcing.
+- The actual native browser creates a quoted/HTML-like TXT value, reopens its
+  plain-text form, changes TTL from 900 to 1200 and shows the saved values as text.
+  Live diagnostics show current authoritative serials over UDP and TCP and label
+  missing public recursive answers correctly. Record, diagnostics, stop-hosting
+  and activation dialogs fit 320, 390, 463, 768, 1280 and 1920 CSS pixels without
+  document/dialog horizontal overflow. Dialogs stay at or below 560 pixels;
+  visible record/confirmation controls measure at least 44 pixels on phones and
+  40 elsewhere. Temporary viewport overrides are cleared.
+
+Positive ownership in native acceptance is an explicit test fixture for reserved
+`.test` names. Two public-resolver matching/failure cases are unit-tested; real
+public ownership, independent nameserver availability, registrar delegation,
+DNSSEC, DNS control-state recovery and independent security/capacity acceptance
+remain pending. Files/service updates and SQLite commit are not crash-atomic;
+owner inspection and a rebuild are required after an interrupted commit. See
+[PUBLIC_DNS.md](PUBLIC_DNS.md). Mail and whole-account migration remain open.
+Existing live services were not upgraded or reconfigured.
+
+---
+
 # Unreleased 0.4.3 database and recovery follow-up
 
 Verified 19 November 2026. The development catalog records **253 workflows:

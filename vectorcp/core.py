@@ -306,17 +306,20 @@ class Engine:
         from .databases import OPERATIONS as database_operations, READ_ONLY as database_reads
         from .backup_policy import OPERATIONS as policy_operations, READ_ONLY as policy_reads
         from .offsite import OPERATIONS as offsite_operations, READ_ONLY as offsite_reads
+        from .dns import OPERATIONS as dns_operations, READ_ONLY as dns_reads
         allowed = {"overview", "accounts.list", "accounts.create", "accounts.active", "sites.list", "sites.create", "sites.active",
                    "files.list", "files.read", "files.write", "files.mkdir", "backups.list", "backups.create", "backups.download", "audit", "logout", "hosting.enable", "hosting.php", "hosting.wordpress", "hosting.tls", "databases.create", "databases.list", "databases.credentials", "jobs.list", "backups.full", "backups.restore", "backups.delete", "backups.describe", "backups.chunk", "plans.list", "plans.create", "plans.active", "plans.assign", "dns.list", "dns.create", "dns.save", "dns.delete", "dns.export", "dns.verify"}
         allowed |= file_operations | security_operations | routing_operations | {'accounts.inspect', 'accounts.update', 'accounts.bulk'}
         allowed |= database_operations | policy_operations
         allowed |= offsite_operations
+        allowed |= dns_operations
         if method not in allowed:
             raise Fault("Unknown operation.", 404)
         read_only = method in {"overview", "accounts.list", "sites.list", "files.list", "files.read", "backups.list", "backups.download", "audit", "jobs.list", "databases.list", "databases.credentials", "backups.describe", "backups.chunk", "plans.list", "dns.list", "dns.export"}
         read_only = read_only or method in file_reads | security_reads | {'accounts.inspect', 'sites.routing.get'}
         read_only = read_only or method in database_reads | policy_reads
         read_only = read_only or method in offsite_reads
+        read_only = read_only or method in dns_reads
         with self.lock, self.db() as db:
             actor = self.authenticate(db, request.get("token"))
             if actor['password_change_required'] and method not in {'overview', 'security.status', 'security.password', 'logout'}:

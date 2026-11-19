@@ -12,6 +12,16 @@ unchanged; a 0.4.3 release archive has not yet been published.
 
 ### Added
 
+- An optional owner-installed public authoritative BIND profile with explicit
+  interfaces, UDP/TCP readiness checks, private recovery copies and profile
+  rollback. Existing zones stay drafts until activation repeats ownership checks
+  through two public resolvers. Record editing, stale-form protection, controlled
+  deactivation, zone rebuilds and bounded DNS diagnostics share the existing UI.
+  See [PUBLIC_DNS.md](PUBLIC_DNS.md) for delegation and acceptance limits.
+- A shared private-state maintenance lock prevents DNS mutations racing the
+  supplied DNS/hosting profile helpers. The private installer refuses to overwrite
+  a public profile; public profile changes refuse active zones.
+
 - Scoped additional MariaDB users and individual database grants, password
   rotation/removal, read-only table browsing, size reports and bounded SQL
   import/export with failure rollback. See [DATABASE_ADMIN.md](DATABASE_ADMIN.md).
