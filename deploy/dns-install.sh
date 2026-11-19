@@ -3,11 +3,19 @@
 set -euo pipefail
 [[ ${1:-} == --apply ]] || { echo 'Usage: sudo bash dns-install.sh --apply'; exit 2; }
 [[ $EUID == 0 && -d /opt/vectorcp/vectorcp && -f /etc/almalinux-release ]] || { echo 'Requires an existing VectorCP installation on AlmaLinux 9.'; exit 1; }
-exec 9>/run/vectorcp-profile-maintenance.lock
+exec 9>/var/lib/vectorcp/profile-maintenance.lock
 flock -n 9 || { echo 'Another service-profile change is running.' >&2; exit 1; }
 [[ ! -e /run/vectorcp-profile-maintenance ]] || { echo 'Inspect the previous interrupted profile change before retrying.' >&2; exit 1; }
 install -m 0600 /dev/null /run/vectorcp-profile-maintenance
 trap 'rm -f /run/vectorcp-profile-maintenance' EXIT
+if [[ -f /etc/vectorcp/dns/installed.json ]]; then
+  python3 - <<'PY'
+import json
+from pathlib import Path
+if json.loads(Path('/etc/vectorcp/dns/installed.json').read_text()).get('mode') != 'private':
+    raise SystemExit('A public DNS profile is installed. Stop its zones, then use dns-public.sh --apply --private to change profiles.')
+PY
+fi
 python3 - <<'PY'
 import sqlite3
 with sqlite3.connect('/var/lib/vectorcp/control.sqlite3') as db:

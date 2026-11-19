@@ -5,7 +5,7 @@ set -euo pipefail
 [[ ${1:-} == --apply ]] || { echo 'Use --apply on the existing dedicated VectorCP host.'; exit 0; }
 # Block new jobs before checking existing ones. The marker is transient and the
 # lock prevents two native service installers from changing units concurrently.
-exec 9>/run/vectorcp-profile-maintenance.lock
+exec 9>/var/lib/vectorcp/profile-maintenance.lock
 flock -n 9 || { echo 'Another service-profile change is running.' >&2; exit 1; }
 [[ ! -e /run/vectorcp-profile-maintenance ]] || { echo 'Inspect the previous interrupted profile change before retrying.' >&2; exit 1; }
 install -m 0600 /dev/null /run/vectorcp-profile-maintenance
