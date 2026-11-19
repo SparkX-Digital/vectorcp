@@ -7,8 +7,8 @@ authorization checks, recovery behavior and reproducible acceptance evidence.
 
 The [product specification](PRODUCT.md) defines the roles, installation contract
 and release gates. The [capability catalog](CAPABILITIES.md) breaks the full
-scope into customer, reseller and administrator workflows. Updated 18 November
-2026 with Unreleased account/security, file, bulk website and routing workflows. Demo
+scope into customer, reseller and administrator workflows. Updated 19 November
+2026 with Unreleased database administration and automatic/SFTP recovery workflows. Demo
 screens reveal controls, but cannot establish undocumented behavior or prove
 that an action works on a real server.
 
@@ -60,7 +60,7 @@ evidence. Features can move between milestones when dependencies require it.
 | Optional installers | Planned; not implemented. | Softaculous integration | Licensing and supported-version validation; no assumption that a third-party paid product is included |
 | Runtime apps | Planned; not implemented. | Node.js and Python apps from customer folders | Account-owned services, lifecycle controls, logs and enforced limits |
 | Container apps | Planned; not implemented. | n8n, Ghost, Gitea, Vaultwarden, Grafana, Uptime Kuma and Ollama | Reviewed image sources; persistent data; limits; networking; backup and upgrade recovery |
-| MariaDB | Partial: private instances and site databases. User management/browser administration pending. | Databases, users, access controls, dump/restore and browser administration | Cross-account database access denied; connection and query constraints exercised |
+| MariaDB | Partial: private instances, additional local users/grants, read-only table browser and bounded SQL import/export with rollback. Other administration remains pending. | Databases, users, access controls, dump/restore and browser administration | Cross-account database access denied; connection and query constraints exercised |
 | PostgreSQL | Planned; not implemented. | Per-account databases and users with administration sign-on | Role isolation; ownership and recovery tests |
 | MongoDB | Planned; not implemented. | Per-account database controls | Authentication and tenant boundaries; dump/restore tests |
 | Shared DB allowance | Planned; not implemented. | A plan's combined database count across engines | Cannot multiply the allowance by choosing different engines |
@@ -85,9 +85,9 @@ evidence. Features can move between milestones when dependencies require it.
 | Security scans | Planned; not implemented. | Isolation checks, rootkit scanning, hardening and scheduled reporting | Findings distinguish reports from automatic changes; bounded safe fixes rechecked |
 | SELinux | Partial: verified enforcing on current host. Broad clean-install coverage pending. | Operation with enforcing policies | Fresh install, updates, apps and restores work with enforcement enabled |
 | Server backups | Planned; not implemented. | Jobs, schedules, selected components, retention and destinations | Actual recovery proves files, databases and mail are usable |
-| Customer backups | Partial: bounded local files/SQL backup/restore/download. Schedules/remote destinations pending. | Account-owned schedules, storage accounting, download and restore | Quota headroom maintained; no recursive inclusion of prior backups |
+| Customer backups | Partial: bounded files/SQL recovery, daily/weekly UTC schedules, storage accounting and SFTP fetch/restore. Whole-account recovery remains pending. | Account-owned schedules, storage accounting, download and restore | Quota headroom maintained; no recursive inclusion of prior backups |
 | Reseller backups | Planned; not implemented. | Customer selection, reseller storage and non-overlapping windows | Ownership and pool constraints; do not interfere with server jobs |
-| Remote storage | Planned; not implemented. | Local, SFTP, FTPS, S3-compatible storage and Google Drive | Connection tests, host/certificate verification, outage recovery and discovery after rebuild |
+| Remote storage | Partial: owner-configured pinned SFTP, round-trip hash verification and fetch after local deletion. Other transports and clean-machine recovery pending. | Local, SFTP, FTPS, S3-compatible storage and Google Drive | Connection tests, host/certificate verification, outage recovery and discovery after rebuild |
 | Backup formats | Planned; not implemented. | gzip, zstd, uncompressed and encrypted incremental repositories | Restore using only the documented archive/key material on a clean machine |
 | Partial restore | Planned; not implemented. | Account, folder, database, mailbox, DNS, cron and application data | Restore only selected material; unrelated current data remains intact |
 | Migration | Planned; not implemented. | Documented third-party backup formats, remote account transfers and VectorCP exports | Versioned fixtures for each supported transport and backup format |

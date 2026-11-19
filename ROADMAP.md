@@ -48,8 +48,9 @@ verified, tenant boundaries hold and backup/restore includes these services.
 ## 4. Developer and recovery workflows
 
 Add controlled cron, Git deployment, additional supported application runtimes,
-restricted shell/FTP access and migration paths. Add scheduled, off-server and
-incremental backups with retention and recovery verification.
+restricted shell/FTP access and migration paths. Extend the Unreleased daily/weekly schedules and verified SFTP recovery with
+monthly policies, other remote transports, incremental repositories and
+independent-server disaster recovery.
 
 Complete when every operation enforces role/ownership and resource limits, and
 the documented recovery/migration path succeeds on real test installations.

@@ -1,6 +1,6 @@
 # VectorCP capability catalog
 
-Updated 18 November 2026. This catalog defines the intended scope for a free,
+Updated 19 November 2026. This catalog defines the intended scope for a free,
 self-hosted hosting panel. It consolidates customer tools, reseller operations
 and server administration into original product requirements. It is not a
 claim that every tool is implemented.
@@ -15,6 +15,11 @@ Statuses describe the current development source. The **Unreleased** account,
 security and file workflows are not part of the immutable 0.4.2 download; see
 [CHANGELOG.md](CHANGELOG.md), [ACCOUNT_SECURITY.md](ACCOUNT_SECURITY.md) and
 [FILE_MANAGER.md](FILE_MANAGER.md) for implementation limits and evidence.
+
+Unreleased database and recovery workflows are described in
+[DATABASE_ADMIN.md](DATABASE_ADMIN.md) and [BACKUP_SCHEDULING.md](BACKUP_SCHEDULING.md).
+SQL import/export is bounded; the browser is read-only. SFTP is the only remote
+transport implemented. Monthly retention and configurable staging remain pending.
 
 Stable IDs identify work items and acceptance evidence. A row is a user workflow,
 not necessarily a screen or a single development task. Read [PRODUCT.md](PRODUCT.md)
@@ -189,10 +194,10 @@ preference, suspension precedence, failure recovery and acceptance scope.
 | --- | --- | --- |
 | VCP-0801 | Private MariaDB instances and per-site databases | Available |
 | VCP-0802 | Database creation wizard | Partial |
-| VCP-0803 | Database users and granular grants | Planned |
+| VCP-0803 | Database users and granular grants | Available |
 | VCP-0804 | Rename, remove, check and repair databases | Planned |
-| VCP-0805 | Browser database administration and scoped sign-on | Planned |
-| VCP-0806 | Database import/export and size reports | Partial |
+| VCP-0805 | Browser database administration and scoped sign-on | Partial |
+| VCP-0806 | Database import/export and size reports | Available |
 | VCP-0807 | Remote access host allowlists and TLS | Planned |
 | VCP-0808 | PostgreSQL databases, roles and administration | Planned |
 | VCP-0809 | MongoDB databases and account controls | Planned |
@@ -310,13 +315,13 @@ preference, suspension precedence, failure recovery and acceptance scope.
 | VCP-1302 | Scoped restore with previous-copy rollback | Available |
 | VCP-1303 | Chunked download and SHA-256 verification | Available |
 | VCP-1304 | Local retention limits and deletion | Available |
-| VCP-1305 | Customer schedules and storage accounting | Planned |
+| VCP-1305 | Customer schedules and storage accounting | Available |
 | VCP-1306 | Server schedules and account selection | Planned |
-| VCP-1307 | Daily, weekly and monthly retention policies | Planned |
-| VCP-1308 | Free-space thresholds and staging paths | Planned |
+| VCP-1307 | Daily, weekly and monthly retention policies | Partial |
+| VCP-1308 | Free-space thresholds and staging paths | Partial |
 | VCP-1309 | Back up suspended accounts and system configuration | Planned |
 | VCP-1310 | Reseller schedules and independent destinations | Planned |
-| VCP-1311 | SFTP, FTPS, S3 and optional drive destinations | Planned |
+| VCP-1311 | SFTP, FTPS, S3 and optional drive destinations | Partial |
 | VCP-1312 | Encrypted incremental repositories | Planned |
 | VCP-1313 | Compression formats and integrity checks | Partial |
 | VCP-1314 | Restore selected folder, database or mailbox | Planned |

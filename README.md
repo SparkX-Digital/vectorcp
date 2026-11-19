@@ -127,8 +127,10 @@ site; application writes are constrained by volume capacity. Backups support
 SQL. Up to 5 copies / 512 MB per customer and 2 GiB total are retained. PHP pauses
 for a consistent copy and during restore. Restore needs room for a temporary
 second copy inside the customer's volume. Hidden regular files and empty
-folders are included; symlinks and special files are excluded. These are local
-website backups, not whole-server images. Keep a downloaded independent copy.
+folders are included; symlinks and special files are excluded. These are website backups, not whole-server images. Unreleased schedules and
+verified SFTP copies are described in [BACKUP_SCHEDULING.md](BACKUP_SCHEDULING.md).
+[DATABASE_ADMIN.md](DATABASE_ADMIN.md) covers scoped users, table browsing and SQL
+import/export. Keep an independent recovery copy.
 
 ## Installation
 
@@ -215,7 +217,7 @@ See `VERIFICATION.md` for the exact live evidence and remaining limitations.
 ## Remaining product scope
 
 Dynamic inherited plans, nested resellers, mail/webmail, public DNS/DNSSEC, customer shells
-and FTP, scheduled/off-server/incremental backups, arbitrary application runtimes,
+and FTP, encrypted incremental backups, additional remote transports, arbitrary application runtimes,
 cron/Git, migration, WAF/scanning, billing, update/rollback management and AI/MCP
 integrations remain further work. Independent security review, sustained load,
 crash/disk-exhaustion recovery and comprehensive acceptance testing are pending.
