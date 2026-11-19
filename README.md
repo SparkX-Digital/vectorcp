@@ -60,6 +60,8 @@ See the [roadmap](ROADMAP.md) for the next capability gates.
 - Selected website suspension/activation with individual outcomes and stopping on uncertain responses. See [BULK_OPERATIONS.md](BULK_OPERATIONS.md).
 - A DNS record editor for A, AAAA, CNAME, MX, TXT, NS, CAA and SRV records,
   private authoritative validation, zone export and public TXT ownership checks.
+- Unreleased optional public authoritative DNS, explicit draft activation,
+  record editing, rebuilds and bounded nameserver diagnostics. See [PUBLIC_DNS.md](PUBLIC_DNS.md).
 
 ## Use
 
@@ -83,12 +85,13 @@ See the [roadmap](ROADMAP.md) for the next capability gates.
 The owner/admin account remains a control-plane identity; create application
 sites under an isolated customer. Existing static accounts remain usable.
 Locking panel access signs a customer out; website suspension is a separate action.
-Mail delivery and public authoritative DNS are not provided by this release.
-**DNS zones** provides a private preview and export for an existing DNS provider.
-The preview listens only on the VPS loopback address. Public DNS records are not
-changed by the editor. Exported SOA/NS entries describe the preview; adapt them
-to the destination provider. Public DNS hosting, PowerDNS, DNSSEC and clustering
-remain planned.
+Mail delivery is not implemented. The stable 0.4.2 DNS service provides a private
+preview and export; its editor does not change public DNS. Unreleased 0.4.3 adds
+an owner-installed public authoritative profile. Existing zones remain drafts
+until explicit activation repeats ownership verification. Read [PUBLIC_DNS.md](PUBLIC_DNS.md)
+before enabling it; delegation, glue, firewall changes, independent nameserver
+availability and real external verification are separate operator tasks.
+DNSSEC and clustering remain planned.
 
 ## Hosting boundaries and limits
 
@@ -216,7 +219,7 @@ See `VERIFICATION.md` for the exact live evidence and remaining limitations.
 
 ## Remaining product scope
 
-Dynamic inherited plans, nested resellers, mail/webmail, public DNS/DNSSEC, customer shells
+Dynamic inherited plans, nested resellers, mail/webmail, full public DNS acceptance/DNSSEC, customer shells
 and FTP, encrypted incremental backups, additional remote transports, arbitrary application runtimes,
 cron/Git, migration, WAF/scanning, billing, update/rollback management and AI/MCP
 integrations remain further work. Independent security review, sustained load,

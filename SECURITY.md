@@ -30,9 +30,11 @@ is deliberate administrative delegation. Customers cannot create other accounts
 or increase their own allowances. An owner lock takes precedence over reseller
 changes. No public arbitrary shell endpoint is provided.
 
-DNS in 0.3 is a loopback-only authoritative preview. It cannot change a domain's
-public DNS until the operator independently configures a public DNS service or
-imports the zone at an existing provider. No public recursive resolver is enabled.
+The default DNS service is a loopback-only authoritative preview. Unreleased
+0.4.3 adds an optional public authoritative profile; drafts are excluded and
+activation repeats ownership verification through two fixed public resolvers.
+No public recursive resolver or zone transfer is enabled. Read [PUBLIC_DNS.md](PUBLIC_DNS.md)
+for trust boundaries, operator responsibilities and incomplete recovery gates.
 
 The Unreleased source adds authenticator enrollment, single-use recovery codes,
 private session inventory/revocation, credential rechecks and temporary-password

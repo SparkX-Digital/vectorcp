@@ -39,8 +39,10 @@ successful and failed operations on the supported Linux target.
 
 Implement mailboxes, routing, quotas, TLS, antispam, deliverability checks and a
 webmail path. Provide public authoritative DNS, record lifecycle and DNSSEC with
-clear delegation and network configuration. Current DNS preview is not public
-DNS hosting; current package flags do not provide a working mail service.
+clear delegation and network configuration. The Unreleased optional public BIND
+profile adds explicit activation and diagnostics; independent delegation,
+multi-nameserver availability, DNSSEC and DNS backup/recovery remain open.
+Current package flags do not provide a working mail service.
 
 Complete when external mail delivery and public DNS behavior are independently
 verified, tenant boundaries hold and backup/restore includes these services.

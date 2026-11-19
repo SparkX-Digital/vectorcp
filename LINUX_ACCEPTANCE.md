@@ -67,7 +67,8 @@ the previous application, retains its database snapshot, and the website works.
 Never publish that intentionally broken fixture as a release.
 
 The service-profile helpers refuse active hosting jobs and serialize their
-maintenance with a local lock. A crash can leave
+maintenance with `/var/lib/vectorcp/profile-maintenance.lock`. Unreleased DNS
+mutations also take that lock in shared mode. A crash can leave
 `/run/vectorcp-profile-maintenance`; inspect the interrupted installer and active
 jobs before removing that marker and retrying. The marker blocks new hosting
 jobs in the current agent. A normal helper exit removes it automatically.
@@ -77,3 +78,18 @@ DNS delegation, email delivery, an older-layout migration, multi-platform
 installation, independent disaster recovery or a production security audit.
 Record the tested source, OS image, versions and actual results in
 [VERIFICATION.md](VERIFICATION.md).
+
+## Optional public DNS service checks
+
+On that disposable guest only, the Unreleased `tests/acceptance_dns_linux.py`
+requires `--allow-disposable-host`, the operator-owned `--public-ip` and either
+`--prepare` or `--finish`. Prepare configures the guest fixture IPv4 marker if
+absent; it does not issue a TLS certificate. It checks actual BIND profile changes,
+draft exclusion, a failed real ownership query, fixture-authorized activation,
+record edits, reload/profile rollback, recursion/transfer denial and SELinux.
+It leaves one reserved `.test` zone active for an off-guest UDP/TCP query.
+Finish stops public hosting, retains records and rebuilds the private preview.
+Use temporary, guest-only network rules if needed for the off-guest check; do not
+open the production host firewall. Positive ownership is a controlled test fixture,
+not evidence of real public ownership or registrar delegation. Never publish its
+private baseline owner credentials or control-state context.

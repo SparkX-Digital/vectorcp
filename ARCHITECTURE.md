@@ -26,7 +26,9 @@ object ownership. The web process cannot choose the request's effective role.
 `core.py` owns authentication, bounded files, sites, audit and job submission.
 `distribution.py` owns reseller delegation and hosting packages. `hosting.py`
 integrates isolated PHP, MariaDB, WordPress, certificates and local recovery.
-`dns.py` owns validated records, serials, private BIND publication and zone export.
+`dns.py` owns validated records, serials, draft/active BIND publication and export.
+`dns_profile.py` provides the owner-only private/public service transition; browser
+requests cannot choose interfaces, probe destinations or nameserver configuration.
 `hosting_task.py` exposes fixed customer tasks through root-only Unix sockets;
 it accepts no arbitrary executable or shell command.
 
@@ -60,10 +62,12 @@ Generate configuration from typed values, validate before reload, retain the
 previous configuration on failure, and confirm observed service state. Never
 turn a dashboard button into an unrestricted root command dispatcher.
 
-The 0.3 DNS service listens on `127.0.0.1:53`, has recursion and transfers disabled,
-and validates each zone with BIND before reloading. Public nameserver profiles,
-DNSSEC, clustering and Cloudflare synchronization remain planned. BIND is the
-private preview engine; PowerDNS integration in the reference is not claimed.
+The default DNS service is a loopback private preview. Unreleased 0.4.3 adds an
+optional authoritative public profile with explicit owner-selected interfaces,
+draft exclusion, activation-time ownership checks, controlled deactivation and
+UDP/TCP confirmation. Recursion and transfers remain disabled. See [PUBLIC_DNS.md](PUBLIC_DNS.md)
+for delegation, independent-server and crash-recovery limitations. DNSSEC,
+clustering and external synchronization remain planned.
 
 A service is available only after its backend is installed and exercised.
 Unimplemented features belong in the roadmap, not as pretend success actions.
