@@ -240,9 +240,9 @@ php_admin_value[disable_functions] = exec,passthru,shell_exec,system,proc_open,p
             time.sleep(0.25)
         raise Fault('The customer database did not become ready.', 503)
 
-    def sql(self, slot, statement):
+    def sql(self, slot, statement, raw=False):
         return command(['/usr/bin/mariadb', '--no-defaults', '--protocol=socket', '--socket=' + self.db_socket(slot),
-                        '--user=root', '--batch', '--skip-column-names'], input=statement.encode(), timeout=60)
+                        '--user=root', '--batch', '--skip-column-names'] + (['--raw'] if raw else []), input=statement.encode(), timeout=60)
 
     def create_database(self, site, owner):
         slot = self.slot(owner)
@@ -250,7 +250,7 @@ php_admin_value[disable_functions] = exec,passthru,shell_exec,system,proc_open,p
         password = secrets.token_urlsafe(32)
         self.start_db(slot)
         # All SQL identifiers are generated integer IDs, all secrets URL-safe.
-        self.sql(slot, "CREATE DATABASE `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; CREATE USER '%s'@'localhost' IDENTIFIED BY '%s'; GRANT ALL ON `%s`.* TO '%s'@'localhost';" % (name, name, password, name, name))
+        self.sql(slot, "CREATE DATABASE `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; CREATE USER '%s'@'localhost' IDENTIFIED BY '%s'; GRANT ALL ON `%s`.* TO '%s'@'localhost';" % (name, name, password, name.replace('_', '\\_'), name))
         credentials = {'name': name, 'username': name, 'password': password, 'socket': self.db_socket(slot)}
         path = self.engine.state / ('hosting/database-%d.json' % site['id'])
         path.write_text(json.dumps(credentials))
@@ -384,21 +384,24 @@ php_admin_value[disable_functions] = exec,passthru,shell_exec,system,proc_open,p
             yield
         finally:
             if was_active:
+                # These are deliberate maintenance stops, not a crash loop.
+                # Repeated short jobs must not exhaust systemd's start counter.
+                command(['/usr/bin/systemctl', 'reset-failed', 'vectorcp-php@' + slot])
                 self.start_php(slot)
 
-    def dump_database(self, slot, name):
+    def dump_database(self, slot, name, maximum=64 * 1024 * 1024):
         if not re.fullmatch(r'site_[1-9][0-9]*', name):
             raise Fault('Invalid database allocation.', 500)
         self.start_db(slot)
-        args = ['/usr/bin/prlimit', '--fsize=67108864', '--', '/usr/bin/mariadb-dump', '--no-defaults', '--protocol=socket',
+        args = ['/usr/bin/prlimit', '--fsize=%d' % maximum, '--', '/usr/bin/mariadb-dump', '--no-defaults', '--protocol=socket',
                 '--socket=' + self.db_socket(slot), '--user=root', '--single-transaction', '--quick', '--hex-blob',
                 '--skip-comments', '--skip-dump-date', name]
         with tempfile.TemporaryFile(dir=str(self.engine.state / 'hosting')) as output:
             result = subprocess.run(args, stdout=output, stderr=subprocess.PIPE, timeout=90)
             if result.returncode:
-                raise Fault('Database backup failed or exceeds its 64 MB limit.', 409)
+                raise Fault('Database export failed or exceeds its %d MB limit.' % (maximum // 1024 ** 2), 409)
             output.seek(0)
-            return output.read(64 * 1024 * 1024)
+            return output.read(maximum)
 
     def replace_database(self, slot, name, payload):
         if not re.fullmatch(r'site_[1-9][0-9]*', name):
@@ -407,7 +410,7 @@ php_admin_value[disable_functions] = exec,passthru,shell_exec,system,proc_open,p
         command(['/usr/bin/mariadb', '--no-defaults', '--protocol=socket', '--socket=' + self.db_socket(slot),
                  '--user=root', '--binary-mode=1', '--local-infile=0', name], input=payload)
 
-    def full_backup(self, site, owner):
+    def full_backup(self, site, owner, schedule_site=None):
         import io
         slot = self.slot(owner)
         with self.engine.db() as db:
@@ -415,6 +418,8 @@ php_admin_value[disable_functions] = exec,passthru,shell_exec,system,proc_open,p
             global_size = db.execute('SELECT COALESCE(SUM(bytes),0) FROM backups').fetchone()[0]
         if usage[0] >= 5 or usage[1] >= 512 * 1024 ** 2 or global_size >= 2 * 1024 ** 3:
             raise Fault('Backup retention is full. Download and delete an older backup first.', 409)
+        if shutil.disk_usage(self.engine.backups).free < 512 * 1024 ** 2:
+            raise Fault('Backups require at least 512 MB of free host storage before staging.', 409)
         root = self.engine.site_root(site)
         backup_id = secrets.token_hex(12)
         target = self.engine.backups / (backup_id + '.tar.gz')
@@ -470,11 +475,13 @@ php_admin_value[disable_functions] = exec,passthru,shell_exec,system,proc_open,p
                 info = tarfile.TarInfo('bundle/manifest.json')
                 info.size = len(payload)
                 archive.addfile(info, io.BytesIO(payload))
-            if target.stat().st_size + usage[1] > 512 * 1024 ** 2:
+            if target.stat().st_size + usage[1] > 512 * 1024 ** 2 or target.stat().st_size + global_size > 2 * 1024 ** 3:
                 raise Fault('This backup exceeds the customer backup retention allowance.', 409)
             with self.engine.db() as db:
                 db.execute("INSERT INTO backups(id,user_id,site_id,domain,bytes,created,kind) VALUES(?,?,?,?,?,?,'full')",
                            (backup_id, owner['id'], site['id'], site['domain'], target.stat().st_size, int(time.time())))
+                if schedule_site is not None:
+                    db.execute('INSERT INTO scheduled_backups VALUES(?,?)', (backup_id, schedule_site))
             return {'id': backup_id}
         except Exception:
             target.unlink(missing_ok=True)

@@ -173,6 +173,18 @@ class Engine:
         with self.db() as db:
             migrate_routing(db)
         self.routing = Routing(self)
+        from .databases import Databases, migrate as migrate_databases
+        with self.db() as db:
+            migrate_databases(db)
+        self.databases = Databases(self)
+        from .backup_policy import BackupPolicy, migrate as migrate_backup_policy
+        with self.db() as db:
+            migrate_backup_policy(db)
+        self.backup_policy = BackupPolicy(self)
+        from .offsite import Offsite, migrate as migrate_offsite
+        with self.db() as db:
+            migrate_offsite(db)
+        self.offsite = Offsite(self)
         os.chmod(self.db_path, 0o600)
 
     @contextlib.contextmanager
@@ -291,13 +303,20 @@ class Engine:
         from .filetools import OPERATIONS as file_operations, READ_ONLY as file_reads
         from .security import OPERATIONS as security_operations, READ_ONLY as security_reads
         from .routing import OPERATIONS as routing_operations
+        from .databases import OPERATIONS as database_operations, READ_ONLY as database_reads
+        from .backup_policy import OPERATIONS as policy_operations, READ_ONLY as policy_reads
+        from .offsite import OPERATIONS as offsite_operations, READ_ONLY as offsite_reads
         allowed = {"overview", "accounts.list", "accounts.create", "accounts.active", "sites.list", "sites.create", "sites.active",
                    "files.list", "files.read", "files.write", "files.mkdir", "backups.list", "backups.create", "backups.download", "audit", "logout", "hosting.enable", "hosting.php", "hosting.wordpress", "hosting.tls", "databases.create", "databases.list", "databases.credentials", "jobs.list", "backups.full", "backups.restore", "backups.delete", "backups.describe", "backups.chunk", "plans.list", "plans.create", "plans.active", "plans.assign", "dns.list", "dns.create", "dns.save", "dns.delete", "dns.export", "dns.verify"}
         allowed |= file_operations | security_operations | routing_operations | {'accounts.inspect', 'accounts.update', 'accounts.bulk'}
+        allowed |= database_operations | policy_operations
+        allowed |= offsite_operations
         if method not in allowed:
             raise Fault("Unknown operation.", 404)
         read_only = method in {"overview", "accounts.list", "sites.list", "files.list", "files.read", "backups.list", "backups.download", "audit", "jobs.list", "databases.list", "databases.credentials", "backups.describe", "backups.chunk", "plans.list", "dns.list", "dns.export"}
         read_only = read_only or method in file_reads | security_reads | {'accounts.inspect', 'sites.routing.get'}
+        read_only = read_only or method in database_reads | policy_reads
+        read_only = read_only or method in offsite_reads
         with self.lock, self.db() as db:
             actor = self.authenticate(db, request.get("token"))
             if actor['password_change_required'] and method not in {'overview', 'security.status', 'security.password', 'logout'}:
@@ -307,6 +326,16 @@ class Engine:
                 if not isinstance(csrf, str) or not hmac.compare_digest(csrf, actor["csrf"]):
                     raise Fault("Request verification failed. Refresh and try again.", 403)
             from .distribution import scope, manages
+            if method in offsite_operations:
+                return self.offsite.dispatch(db, actor, method, data)
+            if method in policy_operations:
+                return self.backup_policy.dispatch(db, actor, method, data)
+            if method in database_operations:
+                if method == 'databases.import':
+                    site, _, _ = self.databases.allocation(db, actor, data)
+                    self.databases.validate_import(data, site)
+                    return self.hosting_job(db, actor, method, data)
+                return self.databases.dispatch(db, actor, method, data)
             if method in security_operations:
                 return self.security.dispatch(db, actor, method, data)
             if method.startswith('dns.'):
@@ -714,7 +743,7 @@ class Engine:
                         sha.update(chunk)
                 return {'filename': row['domain'] + '-' + backup_id + '.tar.gz', 'bytes': path.stat().st_size, 'sha256': sha.hexdigest()}
             if method == 'backups.chunk':
-                offset = integer(data.get('offset'), 'offset', 0, 200 * 1024 * 1024)
+                offset = integer(data.get('offset'), 'offset', 0, 280 * 1024 * 1024)
                 with path.open('rb') as stream:
                     stream.seek(offset)
                     payload = stream.read(256 * 1024)
@@ -770,7 +799,7 @@ class Engine:
         self.log(db, actor, "backup.created", site["domain"])
         return {"ok": True, "id": backup_id}
 
-    def hosting_job(self, db, actor, action, data):
+    def hosting_job(self, db, actor, action, data, schedule_site=None):
         if not self.development and Path('/run/vectorcp-profile-maintenance').exists():
             raise Fault('Server components are being maintained. Retry when maintenance finishes.', 409)
         if not self.hosting.enabled:
@@ -807,6 +836,7 @@ class Engine:
             if not available(db, owner):
                 raise Fault('This customer or its reseller is locked.', 409)
             needed = {'hosting.php': ('php',), 'hosting.wordpress': ('php', 'wordpress', 'databases'), 'hosting.tls': ('tls',), 'databases.create': ('databases',)}
+            needed['databases.import'] = ('databases',)
             for feature in needed.get(action, ()):
                 self.distribution.require_feature(db, owner, feature)
             self.hosting.slot(owner)
@@ -822,13 +852,15 @@ class Engine:
             raise Fault('A hosting operation is already running. Wait for it to finish.', 409)
         job_id, now = secrets.token_hex(12), int(time.time())
         db.execute("INSERT INTO jobs VALUES(?,?,?,?,?,?,?,?)", (job_id, owner['id'], site['id'] if site else None, action, 'queued', 'Waiting to start.', now, now))
+        if schedule_site is not None:
+            db.execute("UPDATE backup_schedules SET last_job=?,last_status='queued',last_error='',last_run=? WHERE site_id=?", (job_id, now, schedule_site))
         self.log(db, actor, action + '.queued', site['domain'] if site else owner['username'])
         db.commit()
-        thread = threading.Thread(target=self.run_hosting_job, args=(job_id, dict(actor), dict(owner), dict(site) if site else None, action, data), daemon=True)
+        thread = threading.Thread(target=self.run_hosting_job, args=(job_id, dict(actor), dict(owner), dict(site) if site else None, action, data, schedule_site), daemon=True)
         thread.start()
         return {'ok': True, 'job_id': job_id}
 
-    def run_hosting_job(self, job_id, actor, owner, site, action, data):
+    def run_hosting_job(self, job_id, actor, owner, site, action, data, schedule_site=None):
         import traceback
         from .hosting import command
         try:
@@ -859,7 +891,19 @@ class Engine:
                 elif action == 'hosting.tls':
                     result = self.hosting.tls(site)
                 elif action == 'backups.full':
-                    result = self.hosting.full_backup(site, owner)
+                    result = self.hosting.full_backup(site, owner, schedule_site=schedule_site)
+                    if schedule_site is not None:
+                        with self.db() as db:
+                            destination = db.execute('SELECT destination FROM backup_schedules WHERE site_id=?', (schedule_site,)).fetchone()
+                        if destination and destination['destination']:
+                            self.offsite.send(result['id'], destination['destination'])
+                        self.backup_policy.retention(schedule_site)
+                elif action == 'backups.offsite.send':
+                    result = self.offsite.send(data['id'], data['destination'])
+                elif action == 'backups.offsite.fetch':
+                    result = self.offsite.fetch(data['id'], site, owner)
+                elif action == 'databases.import':
+                    result = self.databases.import_sql(site, owner, data)
                 elif action == 'backups.restore':
                     with self.hosting.paused(self.hosting.slot(owner)):
                         result = self.hosting.restore(site, owner, data['id'])
@@ -871,12 +915,16 @@ class Engine:
                 with self.db() as db:
                     db.execute("UPDATE jobs SET status='complete',message='Completed successfully.',updated=? WHERE id=?", (int(time.time()), job_id))
                     self.log(db, actor, action + '.complete', site['domain'] if site else owner['username'])
+                    if schedule_site is not None:
+                        db.execute("UPDATE backup_schedules SET last_status='complete',last_backup=?,last_error='' WHERE site_id=? AND last_job=?", (result['id'], schedule_site, job_id))
         except Exception as error:
             traceback.print_exc()  # Faults never contain passwords or subprocess output.
             message = str(error) if isinstance(error, Fault) else 'The hosting operation failed. Inspect the server log before retrying.'
             with self.db() as db:
                 db.execute("UPDATE jobs SET status='failed',message=?,updated=? WHERE id=?", (message[:300], int(time.time()), job_id))
                 self.log(db, actor, action + '.failed', site['domain'] if site else owner['username'])
+                if schedule_site is not None:
+                    db.execute("UPDATE backup_schedules SET last_status='failed',last_error=? WHERE site_id=? AND last_job=?", (message[:300], schedule_site, job_id))
 
     @property
     def public_ipv4(self):
@@ -917,5 +965,5 @@ class Engine:
                 "counts": {"sites": count, "active": active, "accounts": db.execute("SELECT COUNT(*) FROM users WHERE role='customer' AND is_reseller=0" + (" AND parent_id=?" if actor['role']=='reseller' else ''), (actor['id'],) if actor['role']=='reseller' else ()).fetchone()[0] if actor['role'] in ('admin','reseller') else None},
                 "features": self.distribution.features(db, actor), "reseller_pool": self.distribution.usage(db, actor) if actor["role"] == "reseller" else None,
                 "services": services, "usage_bytes": self.account_usage(db, actor["id"]),
-                "capabilities": (["Isolated customer storage and processes", "PHP 8.3", "Private MariaDB databases", "WordPress installer", "Customer domain HTTPS", "Local files and database backup/restore"] if self.hosting.enabled else []) + ["Website redirects, HTTPS preference and static error pages", "Active-session inventory and remote revocation", "Authenticator app and single-use recovery codes", "Password policy, resets and forced rotation", "Contact editing and scoped account search", "Selected-account access and plan changes", "Folder copy, batch actions and recoverable trash", "Hidden-file controls and permission editing", "Bounded ZIP creation and safe extraction", "DNS zone editor, export and private authoritative preview", "Public TXT domain ownership checks", "Reseller accounts and delegated customers", "Hosting plans and reserved allowances", "Owner locks and scoped reseller access", "Sign-in and account ownership", "Customer panel accounts", "Static websites", "Text file editor", "Site suspension", "File storage allowances", "Site export downloads", "Audit history"],
-                "planned": ["Public mail service", "Public DNS delegation", "Nested resellers and white-label branding", "Shell and application runtimes", "Scheduled and off-server backups", "Billing and AI integrations"]}
+                "capabilities": (["Isolated customer storage and processes", "PHP 8.3", "Private MariaDB databases, scoped users and table browser", "WordPress installer", "Customer domain HTTPS", "SQL import/export and local files/database recovery", "UTC backup schedules and verified SFTP copies"] if self.hosting.enabled else []) + ["Website redirects, HTTPS preference and static error pages", "Active-session inventory and remote revocation", "Authenticator app and single-use recovery codes", "Password policy, resets and forced rotation", "Contact editing and scoped account search", "Selected-account access and plan changes", "Folder copy, batch actions and recoverable trash", "Hidden-file controls and permission editing", "Bounded ZIP creation and safe extraction", "DNS zone editor, export and private authoritative preview", "Public TXT domain ownership checks", "Reseller accounts and delegated customers", "Hosting plans and reserved allowances", "Owner locks and scoped reseller access", "Sign-in and account ownership", "Customer panel accounts", "Static websites", "Text file editor", "Site suspension", "File storage allowances", "Site export downloads", "Audit history"],
+                "planned": ["Public mail service", "Public DNS delegation", "Nested resellers and white-label branding", "Shell and application runtimes", "Encrypted incremental and whole-account backups", "Billing and AI integrations"]}

@@ -131,9 +131,11 @@ def main():
             os.chown(path, 0, pwd.getpwnam(args.web_user).pw_gid)
         os.chmod(path, 0o660 if not args.development else 0o600)
         print("VectorCP agent ready", flush=True)
+        engine.backup_policy.start()
         try:
             server.serve_forever()
         finally:
+            engine.backup_policy.stop.set()
             path.unlink(missing_ok=True)
 
 
