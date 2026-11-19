@@ -64,13 +64,30 @@ class HttpBoundaryTests(unittest.TestCase):
             self.assertIn("frame-ancestors 'none'",headers['Content-Security-Policy'])
 
     def test_app_and_assets_have_csp_and_nosniff(self):
-        for path in ("/", "/app.js", "/site-batch.js", "/routing-form.js", "/style.css", "/favicon.svg", "/brand.svg", "/brand-light.svg"):
+        for path in ("/", "/app.js", "/site-batch.js", "/routing-form.js", "/data-tools.js", "/style.css", "/favicon.svg", "/brand.svg", "/brand-light.svg"):
             with self.subTest(path=path):
                 status, headers, body = self.request(path=path)
                 self.assertEqual(status, 200)
                 self.assertTrue(body)
                 self.assertIn("frame-ancestors 'none'", headers["Content-Security-Policy"])
                 self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
+
+    def test_database_schedule_and_offsite_http_boundaries(self):
+        cookie,csrf,_=self.login()
+        headers={'Cookie':cookie,'X-CSRF-Token':csrf}
+        status,_,body=self.request('POST','/api',{'method':'sites.create','data':{'domain':'data-http.example.com'}},headers)
+        self.assertEqual(status,200)
+        sid=json.loads(body)['id']
+        for method in ('databases.inspect','databases.users'):
+            status,_,_=self.request('POST','/api',{'method':method,'data':{'site_id':sid}},headers)
+            self.assertEqual(status,409)  # Routed to the agent; isolation is required.
+        for method,key in (('backups.schedules','schedules'),('backups.destinations','destinations'),('backups.offsite.list','copies')):
+            status,_,body=self.request('POST','/api',{'method':method,'data':{}},headers)
+            self.assertEqual(status,200)
+            self.assertIn(key,json.loads(body))
+        for method in ('databases.import','databases.users.create','backups.schedule.save','backups.offsite.send'):
+            status,_,_=self.request('POST','/api',{'method':method,'data':{'site_id':sid}},{'Cookie':cookie})
+            self.assertEqual(status,403)
 
     def test_routing_http_contract_persists_preferences_and_requires_csrf(self):
         cookie,csrf,_=self.login()
