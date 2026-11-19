@@ -22,6 +22,15 @@ class HostingBoundaries(unittest.TestCase):
             self.refused(409, lambda: self.call(self.alice, method, {'site_id':self.a_site}))
         self.refused(403, lambda: self.call(self.alice,'hosting.enable',{'id':self.alice['user']['id']}))
 
+    def test_maintenance_pause_resets_deliberate_starts_and_restores_php_on_error(self):
+        with patch('vectorcp.hosting.subprocess.run') as probe, patch('vectorcp.hosting.command') as command, patch.object(self.engine.hosting, 'start_php') as start:
+            probe.return_value.returncode = 0
+            with self.assertRaisesRegex(ValueError, 'test failure'):
+                with self.engine.hosting.paused('01'):
+                    raise ValueError('test failure')
+            self.assertEqual([c.args[0][1] for c in command.call_args_list], ['stop', 'reset-failed'])
+            start.assert_called_once_with('01')
+
     def test_job_history_and_database_credentials_are_owned(self):
         now=int(time.time())
         with self.engine.db() as db:

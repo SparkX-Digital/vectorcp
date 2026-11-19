@@ -1,3 +1,45 @@
+# Unreleased 0.4.3 database and recovery follow-up
+
+Verified 19 November 2026. The development catalog records **253 workflows:
+50 Available, 21 Partial and 182 Planned**. The immutable 0.4.2 download remains
+unchanged. See [DATABASE_ADMIN.md](DATABASE_ADMIN.md) and
+[BACKUP_SCHEDULING.md](BACKUP_SCHEDULING.md) for limits and owner configuration.
+
+- All **143 local Python 3.13 unit/HTTP checks** pass in 109.495 seconds. They cover the new database, scheduler, offsite
+  and HTTP boundaries alongside existing authentication, hosting and file workflows.
+  The ten selected-website Node regressions and JavaScript/shell syntax checks pass.
+- Seven real MariaDB/SFTP/scheduler groups pass on Python 3.9 in the disposable
+  AlmaLinux 9 guest, with SELinux enforcing. They exercise generated databases,
+  table browsing/size reports, read-only and edited grants, other-database denial,
+  password rotation/removal, SQL export, failed import rollback and denial of
+  client shell/server file commands. Database grant names escape wildcards;
+  import narrows the known legacy pattern and refuses unexpected global grants.
+- A pinned OpenSSH SFTP fixture accepts repeat uploads and mode-0600 archives.
+  Wrong host keys fail. A deleted local copy is fetched, hash-verified and used
+  to restore the original SQL values. Real due schedules create files/SQL/SFTP
+  copies, rotate only their own scheduled archives and preserve manual/unrelated
+  recovery points. A full allowance fails without deleting existing copies.
+- Native checks exposed PHP's start-limit counter during repeated intentional
+  maintenance pauses. Resetting that counter before the controlled restart fixes
+  consecutive backup/import jobs; crash restart settings remain unchanged.
+- Browser checks use the actual native database API. HTML-like cell content is
+  displayed as text. A paused weekly schedule is saved, reopened and retains its
+  website, hour, weekday, state and retention fields. At 320, 390, 463, 768, 1280
+  and 1920 CSS pixels, the database browser and schedule dialog have no document
+  or dialog horizontal overflow; dialogs stay at or below 560 pixels and visible
+  button/text/select fields measure at least 44 pixels on phones and 40 elsewhere.
+  Additional-user permission forms also fit 320, 390, 768 and 1280 pixels.
+  Temporary viewport overrides are reset.
+
+The SFTP fixture is another restricted user on the same disposable guest, not
+an independent offsite server. This is workflow evidence, not clean-machine
+recovery, fresh installation, production capacity, a crash-atomic SQL guarantee
+or an independent security audit. Public mail/DNS, whole-account migration and
+other catalog gaps remain open. Existing live panel and Mustr services were not
+upgraded or reconfigured by this feature batch.
+
+---
+
 # Unreleased 0.4.3 website routing follow-up
 
 Verified 18 November 2026. The catalog records **253 workflows: 47 Available,

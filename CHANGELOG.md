@@ -12,6 +12,16 @@ unchanged; a 0.4.3 release archive has not yet been published.
 
 ### Added
 
+- Scoped additional MariaDB users and individual database grants, password
+  rotation/removal, read-only table browsing, size reports and bounded SQL
+  import/export with failure rollback. See [DATABASE_ADMIN.md](DATABASE_ADMIN.md).
+- Persistent daily/weekly UTC website backup schedules, storage accounting and
+  rotation after success. Owner-configured SFTP destinations use pinned host
+  keys, round-trip hash verification and recovery after local archive deletion.
+  See [BACKUP_SCHEDULING.md](BACKUP_SCHEDULING.md) for limits and configuration.
+- Reset the PHP start counter after intentional maintenance pauses so repeated
+  backup/import jobs can resume PHP without exhausting the crash-loop limit.
+
 - Website redirect rules with exact/folder matching, permanent/temporary status,
   query preservation and remaining-path options; an HTTPS preference that keeps
   the certificate installed; and static HTML error pages for selected statuses.
