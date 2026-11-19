@@ -34,6 +34,7 @@ jobs:
           set -euo pipefail
           node --check vectorcp/static/app.js
           node --check vectorcp/static/routing-form.js
+          node --check vectorcp/static/data-tools.js
           node --test tests/test_site_batch.js
           bash -n deploy/install.sh
           bash -n deploy/hosting-install.sh
