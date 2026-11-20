@@ -7,6 +7,7 @@ set -euo pipefail
 # lock prevents two native service installers from changing units concurrently.
 exec 9>/var/lib/vectorcp/profile-maintenance.lock
 flock -n 9 || { echo 'Another service-profile change is running.' >&2; exit 1; }
+[[ ! -e /var/lib/vectorcp/dns-pending.json && ! -L /var/lib/vectorcp/dns-pending.json ]] || { echo 'Recover the pending DNS change before maintaining service profiles.' >&2; exit 1; }
 [[ ! -e /run/vectorcp-profile-maintenance ]] || { echo 'Inspect the previous interrupted profile change before retrying.' >&2; exit 1; }
 install -m 0600 /dev/null /run/vectorcp-profile-maintenance
 trap 'rm -f /run/vectorcp-profile-maintenance' EXIT
