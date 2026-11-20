@@ -1,3 +1,37 @@
+# Unreleased 0.4.3 DNS recovery and monthly retention
+
+Verified 20 November 2026. The development catalog records **253 workflows:
+52 Available, 23 Partial and 178 Planned**. Managed DNS lifecycle/consistency
+repair and daily/weekly/monthly retention are now available within documented
+limits. Combined configuration restore is partial: DNS records are covered;
+certificates, cron and application configuration are not.
+
+- All **183 local Python unit/HTTP checks** pass, including 21 DNS recovery checks.
+  Ten Node regressions and JavaScript, Python and shell syntax checks pass.
+- Five native acceptance groups pass on the disposable AlmaLinux 9/Python 3.9
+  guest with real BIND and SELinux enforcing. They cover snapshot integrity,
+  restore/removal/recreation, actual abrupt exits before/after SQLite commit,
+  forward SOA recovery and both UDP/TCP transports. Recovery also succeeds when
+  BIND is stopped and its generated file is corrupt. The source upgrade helper
+  refuses a pending DNS checkpoint and successfully preserves the guest state
+  across the candidate upgrade.
+- Owner service repair rebuilds missing/corrupt zones, retains changed/unreferenced
+  original files privately and preserves all pre-existing record rows. Three due
+  monthly jobs create real archives and rotate only the new scheduled fixture;
+  every pre-existing archive is compared by SHA-256 and its database row retained.
+- A startup readiness failure found during native testing was fixed with bounded
+  UDP/TCP connection retries. Repeated identical quarantine copies are reused.
+  The complete native acceptance was rerun successfully after these runtime fixes.
+
+These checks do not prove public delegation, independent nameserver recovery,
+mail delivery, whole-account migration, clean-machine disaster recovery,
+sustained capacity or an independent security audit. DNS record snapshots remain
+separate from website files/SQL archives. The immutable 0.4.2 release is unchanged.
+See [DNS_RECOVERY.md](DNS_RECOVERY.md) and
+[BACKUP_SCHEDULING.md](BACKUP_SCHEDULING.md) for limits.
+
+---
+
 # Unreleased 0.4.3 public authoritative DNS follow-up
 
 Verified 19 November 2026. The development catalog records **253 workflows:

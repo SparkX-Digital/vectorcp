@@ -29,6 +29,23 @@ class BackupPolicyTests(unittest.TestCase):
         self.assertEqual(weekly.weekday(), 0)
         self.assertEqual(weekly.hour, 3)
 
+    def test_monthly_clamps_short_months_then_restores_requested_day(self):
+        stamp=lambda y,m,d,h=3:int(datetime.datetime(y,m,d,h,tzinfo=datetime.timezone.utc).timestamp())
+        self.assertEqual(next_run(stamp(2026,1,31),'monthly',3,0,31),stamp(2026,2,28))
+        self.assertEqual(next_run(stamp(2026,2,28),'monthly',3,0,31),stamp(2026,3,31))
+        self.assertEqual(next_run(stamp(2028,1,31),'monthly',3,0,31),stamp(2028,2,29))
+        self.assertEqual(next_run(stamp(2026,12,31),'monthly',3,0,31),stamp(2027,1,31))
+        self.assertEqual(next_run(stamp(2026,2,28)-1,'monthly',3,0,31),stamp(2026,2,28))
+
+    def test_monthly_day_validation_and_due_run_persistence(self):
+        self.schedule(frequency='monthly',monthday=31)
+        second=Engine(self.engine.state,self.engine.sites,development=True)
+        with second.db() as db:
+            policy=db.execute('SELECT * FROM backup_schedules').fetchone()
+            self.assertEqual((policy['frequency'],policy['monthday']),('monthly',31))
+        for day in (0,32,True,'31'):
+            self.refused(400,lambda:self.schedule(frequency='monthly',monthday=day))
+
     def test_schedule_scope_validation_and_persistence(self):
         self.schedule()
         self.assertEqual(len(self.call(self.alice, 'backups.schedules')['schedules']), 1)

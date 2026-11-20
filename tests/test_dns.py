@@ -64,6 +64,7 @@ class DNSBoundaries(unittest.TestCase):
         self.call(self.alice,'dns.create',{'site_id':self.site})
         path=self.e.dns.zones/('site-%d.zone'%self.site)
         original=path.read_text()
+        original_serial=self.call(self.alice,'dns.list',{'site_id':self.site})['zone']['serial']
         write=self.e.dns.write
         calls=[]
         def fail_config(path,payload):
@@ -72,5 +73,7 @@ class DNSBoundaries(unittest.TestCase):
             return write(path,payload)
         with patch.object(self.e.dns,'write',side_effect=fail_config):
             with self.assertRaises(Fault):self.call(self.alice,'dns.save',{'site_id':self.site,'name':'new','type':'A','value':'1.2.3.4'})
-        self.assertEqual(path.read_text(),original)
+        current=self.call(self.alice,'dns.list',{'site_id':self.site})['zone']['serial']
+        self.assertEqual(current,(original_serial+2)%4294967296)
+        self.assertEqual(path.read_text(),original.replace(str(original_serial),str(current),1))
         self.assertEqual(len(self.call(self.alice,'dns.list',{'site_id':self.site})['records']),1)

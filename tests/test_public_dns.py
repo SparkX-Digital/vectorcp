@@ -148,8 +148,11 @@ class PublicDNSBoundaries(unittest.TestCase):
             if len(counter) == 2: raise Fault('Injected config write failure', 503)
             return original(path, content)
         with patch.object(self.e.dns, 'write', side_effect=fail), self.assertRaises(Fault): self.activate()
+        expected_serial=(old_state['zone']['serial']+2)%4294967296
+        expected_target=old_target.replace(str(old_state['zone']['serial']).encode(),str(expected_serial).encode(),1)
+        old_state['zone']['serial']=expected_serial
         self.assertEqual(self.state(), old_state)
-        self.assertEqual(target.read_bytes(), old_target)
+        self.assertEqual(target.read_bytes(), expected_target)
         self.assertEqual(other.read_bytes(), old_other)
 
     def test_record_edit_duplicate_conflict_and_stale_form(self):

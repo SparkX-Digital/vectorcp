@@ -106,6 +106,8 @@ def apply(p):
     """Called by the locked maintenance wrapper, only for an installed service."""
     if os.geteuid() != 0 or not Path('/etc/almalinux-release').exists():
         raise Fault('DNS profile changes require root on the supported AlmaLinux host.')
+    if Path('/var/lib/vectorcp/dns-pending.json').exists() or Path('/var/lib/vectorcp/dns-pending.json').is_symlink():
+        raise Fault('Recover the pending DNS change before changing its service profile.', 409)
     directory = Path('/etc/vectorcp/dns')
     marker = directory / 'installed.json'
     if not marker.exists() or directory.is_symlink():

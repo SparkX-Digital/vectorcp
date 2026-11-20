@@ -132,6 +132,8 @@ for a consistent copy and during restore. Restore needs room for a temporary
 second copy inside the customer's volume. Hidden regular files and empty
 folders are included; symlinks and special files are excluded. These are website backups, not whole-server images. Unreleased schedules and
 verified SFTP copies are described in [BACKUP_SCHEDULING.md](BACKUP_SCHEDULING.md).
+[DNS_RECOVERY.md](DNS_RECOVERY.md) covers DNS record snapshots, zone removal and
+interrupted-change/service repair.
 [DATABASE_ADMIN.md](DATABASE_ADMIN.md) covers scoped users, table browsing and SQL
 import/export. Keep an independent recovery copy.
 
@@ -223,7 +225,7 @@ Dynamic inherited plans, nested resellers, mail/webmail, full public DNS accepta
 and FTP, encrypted incremental backups, additional remote transports, arbitrary application runtimes,
 cron/Git, migration, WAF/scanning, billing, update/rollback management and AI/MCP
 integrations remain further work. Independent security review, sustained load,
-crash/disk-exhaustion recovery and comprehensive acceptance testing are pending.
+broader crash/disk-exhaustion recovery and comprehensive acceptance testing are pending.
 
 See [architecture](ARCHITECTURE.md), [contributing](CONTRIBUTING.md),
 [security](SECURITY.md), [changelog](CHANGELOG.md) and [coverage](FEATURES.md).

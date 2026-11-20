@@ -1,4 +1,5 @@
 """Persistent per-website UTC schedules, using the existing serialized jobs."""
+import calendar
 import datetime
 import threading
 import time
@@ -28,10 +29,21 @@ def migrate(db):
     ''')
     if 'destination' not in {r[1] for r in db.execute('PRAGMA table_info(backup_schedules)')}:
         db.execute("ALTER TABLE backup_schedules ADD COLUMN destination TEXT NOT NULL DEFAULT ''")
+    if 'monthday' not in {r[1] for r in db.execute('PRAGMA table_info(backup_schedules)')}:
+        db.execute('ALTER TABLE backup_schedules ADD COLUMN monthday INTEGER NOT NULL DEFAULT 1')
 
 
-def next_run(now, frequency, hour, weekday):
+def next_run(now, frequency, hour, weekday, monthday=1):
     current = datetime.datetime.fromtimestamp(now, datetime.timezone.utc)
+    if frequency == 'monthly':
+        def monthly(year, month):
+            return current.replace(year=year, month=month,
+                day=min(monthday, calendar.monthrange(year, month)[1]),
+                hour=hour, minute=0, second=0, microsecond=0)
+        candidate = monthly(current.year, current.month)
+        if candidate.timestamp() <= now:
+            candidate = monthly(current.year + (current.month == 12), current.month % 12 + 1)
+        return int(candidate.timestamp())
     candidate = current.replace(hour=hour, minute=0, second=0, microsecond=0)
     if frequency == 'weekly':
         candidate += datetime.timedelta(days=(weekday-candidate.weekday()) % 7)
@@ -66,10 +78,11 @@ class BackupPolicy:
         current = db.execute('SELECT * FROM backup_schedules WHERE site_id=?', (site['id'],)).fetchone()
         if method == 'backups.schedule.save':
             frequency = data.get('frequency')
-            if frequency not in ('daily', 'weekly'):
-                raise Fault('Choose a daily or weekly schedule.')
+            if frequency not in ('daily', 'weekly', 'monthly'):
+                raise Fault('Choose a daily, weekly or monthly schedule.')
             hour = integer(data.get('hour'), 'UTC hour', 0, 23)
             weekday = integer(data.get('weekday', 0), 'weekday', 0, 6)
+            monthday = integer(data.get('monthday', 1), 'monthly day', 1, 31)
             keep = integer(data.get('keep'), 'retained scheduled copies', 1, 4)
             enabled = data.get('enabled')
             if not isinstance(enabled, bool):
@@ -79,11 +92,11 @@ class BackupPolicy:
                 raise Fault('Invalid offsite destination.')
             if destination:
                 self.e.offsite.destination(destination)
-            due = next_run(int(time.time()), frequency, hour, weekday)
-            db.execute('''INSERT INTO backup_schedules(site_id,user_id,frequency,hour,weekday,keep,enabled,next_run,destination)
-              VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(site_id) DO UPDATE SET frequency=excluded.frequency,
-              hour=excluded.hour,weekday=excluded.weekday,keep=excluded.keep,enabled=excluded.enabled,next_run=excluded.next_run,destination=excluded.destination''',
-                       (site['id'], site['user_id'], frequency, hour, weekday, keep, int(enabled), due, destination))
+            due = next_run(int(time.time()), frequency, hour, weekday, monthday)
+            db.execute('''INSERT INTO backup_schedules(site_id,user_id,frequency,hour,weekday,keep,enabled,next_run,destination,monthday)
+              VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(site_id) DO UPDATE SET frequency=excluded.frequency,
+              hour=excluded.hour,weekday=excluded.weekday,keep=excluded.keep,enabled=excluded.enabled,next_run=excluded.next_run,destination=excluded.destination,monthday=excluded.monthday''',
+                       (site['id'], site['user_id'], frequency, hour, weekday, keep, int(enabled), due, destination, monthday))
             self.e.log(db, actor, 'backup.schedule_saved', site['domain'])
             return {'ok': True, 'next_run': due}
         if not current:
@@ -128,7 +141,7 @@ class BackupPolicy:
                 return
             site = db.execute('SELECT * FROM sites WHERE id=?', (policy['site_id'],)).fetchone()
             owner = db.execute('SELECT * FROM users WHERE id=?', (policy['user_id'],)).fetchone()
-            due = next_run(now, policy['frequency'], policy['hour'], policy['weekday'])
+            due = next_run(now, policy['frequency'], policy['hour'], policy['weekday'], policy['monthday'])
             db.execute('UPDATE backup_schedules SET next_run=? WHERE site_id=?', (due, policy['site_id']))
             try:
                 if not site or not owner or site['user_id'] != owner['id'] or not available(db, owner):

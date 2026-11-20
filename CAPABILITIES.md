@@ -1,6 +1,6 @@
 # VectorCP capability catalog
 
-Updated 19 November 2026. This catalog defines the intended scope for a free,
+Updated 20 November 2026. This catalog defines the intended scope for a free,
 self-hosted hosting panel. It consolidates customer tools, reseller operations
 and server administration into original product requirements. It is not a
 claim that every tool is implemented.
@@ -19,11 +19,12 @@ security and file workflows are not part of the immutable 0.4.2 download; see
 Unreleased database and recovery workflows are described in
 [DATABASE_ADMIN.md](DATABASE_ADMIN.md) and [BACKUP_SCHEDULING.md](BACKUP_SCHEDULING.md).
 SQL import/export is bounded; the browser is read-only. SFTP is the only remote
-transport implemented. Monthly retention and configurable staging remain pending.
+transport implemented. Daily, weekly and monthly retention are implemented; configurable staging remains pending.
 
 The optional Unreleased public authoritative profile and its limits are described
-in [PUBLIC_DNS.md](PUBLIC_DNS.md). External delegation, DNSSEC, zone deletion,
-full consistency repair and independent nameserver recovery remain open.
+in [PUBLIC_DNS.md](PUBLIC_DNS.md). Managed zone deletion, snapshots and consistency
+repair are described in [DNS_RECOVERY.md](DNS_RECOVERY.md). External delegation,
+DNSSEC and independent nameserver recovery remain open.
 
 Stable IDs identify work items and acceptance evidence. A row is a user workflow,
 not necessarily a screen or a single development task. Read [PRODUCT.md](PRODUCT.md)
@@ -265,7 +266,7 @@ preference, suspension precedence, failure recovery and acceptance scope.
 | VCP-1010 | DNS-only nodes and cluster replication | Planned |
 | VCP-1011 | External DNS record synchronization | Planned |
 | VCP-1012 | Proxy, TLS mode and external cache controls | Planned |
-| VCP-1013 | Zone deletion, cleanup, rebuild and consistency repair | Partial |
+| VCP-1013 | Zone deletion, cleanup, rebuild and consistency repair | Available |
 
 ## PHP, apps and development
 
@@ -321,7 +322,7 @@ preference, suspension precedence, failure recovery and acceptance scope.
 | VCP-1304 | Local retention limits and deletion | Available |
 | VCP-1305 | Customer schedules and storage accounting | Available |
 | VCP-1306 | Server schedules and account selection | Planned |
-| VCP-1307 | Daily, weekly and monthly retention policies | Partial |
+| VCP-1307 | Daily, weekly and monthly retention policies | Available |
 | VCP-1308 | Free-space thresholds and staging paths | Partial |
 | VCP-1309 | Back up suspended accounts and system configuration | Planned |
 | VCP-1310 | Reseller schedules and independent destinations | Planned |
@@ -329,7 +330,7 @@ preference, suspension precedence, failure recovery and acceptance scope.
 | VCP-1312 | Encrypted incremental repositories | Planned |
 | VCP-1313 | Compression formats and integrity checks | Partial |
 | VCP-1314 | Restore selected folder, database or mailbox | Planned |
-| VCP-1315 | Restore DNS, certificates, cron and app configuration | Planned |
+| VCP-1315 | Restore DNS, certificates, cron and app configuration | Partial |
 | VCP-1316 | Whole-account export/import and disaster recovery | Planned |
 
 ## Metrics, logs and notifications

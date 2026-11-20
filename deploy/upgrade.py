@@ -4,6 +4,7 @@
 Default: check only. Does not download code, install dependencies or change SSH.
 """
 import argparse
+import fcntl
 import json
 import os
 from pathlib import Path
@@ -31,8 +32,22 @@ def main():
         raise SystemExit('Run as root on an existing VectorCP Linux installation.')
     if (SOURCE/'vectorcp').resolve() == (INSTALL/'vectorcp').resolve():
         raise SystemExit('Extract the reviewed release separately from the active installation.')
-    for filename in ('core.py','agent.py','web.py','distribution.py','hosting.py','hosting_task.py','dns.py','filetools.py','security.py','trash.py','archives.py'):
-        path = SOURCE/'vectorcp'/filename
+    if not args.apply:
+        upgrade(args)
+        return
+    with (STATE/'profile-maintenance.lock').open('a') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise SystemExit('A service profile or DNS change is running. Retry after it finishes.')
+        upgrade(args)
+
+
+def upgrade(args):
+    pending = STATE/'dns-pending.json'
+    if pending.exists() or pending.is_symlink():
+        raise SystemExit('Recover the pending DNS change before upgrading the panel.')
+    for path in sorted((SOURCE/'vectorcp').rglob('*.py')):
         compile(path.read_text(),str(path),'exec')
     with sqlite3.connect(str(STATE/'control.sqlite3')) as db:
         if db.execute("SELECT 1 FROM jobs WHERE status IN ('queued','running')").fetchone():

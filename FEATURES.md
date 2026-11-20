@@ -7,7 +7,7 @@ authorization checks, recovery behavior and reproducible acceptance evidence.
 
 The [product specification](PRODUCT.md) defines the roles, installation contract
 and release gates. The [capability catalog](CAPABILITIES.md) breaks the full
-scope into customer, reseller and administrator workflows. Updated 19 November
+scope into customer, reseller and administrator workflows. Updated 20 November
 2026 with Unreleased database/recovery and optional public authoritative DNS workflows. Demo
 screens reveal controls, but cannot establish undocumented behavior or prove
 that an action works on a real server.
@@ -71,7 +71,7 @@ evidence. Features can move between milestones when dependencies require it.
 | Mail limits | Planned; not implemented. | Recipient-based sending limits across authenticated SMTP and website mail | Both submission paths share the allowance; correct multi-recipient accounting |
 | Deliverability | Planned; not implemented. | PTR checks, public mail-DNS checks, port checks and queue controls | Real external delivery tests; useful diagnosis of provider restrictions |
 | SMTP relay | Planned; not implemented. | Provider presets and custom TLS relay, validated before applying | Failed credentials do not replace working configuration; narrow firewall changes |
-| Authoritative DNS | Partial: private BIND preview/export and optional public profile, explicit activation, record edits, rebuilds and local/recursive diagnostics. Independent delegation and recovery pending. | Public authoritative service, automatic zones, editable records and serial management | Correct answers over UDP and TCP; authorization and conflicting-record checks |
+| Authoritative DNS | Partial: private BIND preview/export and optional public profile, explicit activation, record edits, rebuilds and local/recursive diagnostics. Managed record snapshots and service repair implemented; independent delegation and server recovery pending. | Public authoritative service, automatic zones, editable records and serial management | Correct answers over UDP and TCP; authorization and conflicting-record checks |
 | DNSSEC | Planned; not implemented. | Signing and DS guidance; controlled removal of signing keys | Validate a real chain of trust; safe sequencing when disabling |
 | DNS clustering | Planned; not implemented. | DNS-only node, hosting-node membership, replication and reconciliation | Multi-node propagation; outage and ownership-transfer tests; removal propagates |
 | External DNS | Planned; not implemented. | Cloudflare tokens, domain links, record synchronization, proxy and cache controls | Least-privilege token handling; reconciliation and failure recovery |
@@ -85,7 +85,7 @@ evidence. Features can move between milestones when dependencies require it.
 | Security scans | Planned; not implemented. | Isolation checks, rootkit scanning, hardening and scheduled reporting | Findings distinguish reports from automatic changes; bounded safe fixes rechecked |
 | SELinux | Partial: verified enforcing on current host. Broad clean-install coverage pending. | Operation with enforcing policies | Fresh install, updates, apps and restores work with enforcement enabled |
 | Server backups | Planned; not implemented. | Jobs, schedules, selected components, retention and destinations | Actual recovery proves files, databases and mail are usable |
-| Customer backups | Partial: bounded files/SQL recovery, daily/weekly UTC schedules, storage accounting and SFTP fetch/restore. Whole-account recovery remains pending. | Account-owned schedules, storage accounting, download and restore | Quota headroom maintained; no recursive inclusion of prior backups |
+| Customer backups | Partial: bounded files/SQL recovery, daily/weekly/monthly UTC schedules, storage accounting and SFTP fetch/restore. Whole-account recovery remains pending. | Account-owned schedules, storage accounting, download and restore | Quota headroom maintained; no recursive inclusion of prior backups |
 | Reseller backups | Planned; not implemented. | Customer selection, reseller storage and non-overlapping windows | Ownership and pool constraints; do not interfere with server jobs |
 | Remote storage | Partial: owner-configured pinned SFTP, round-trip hash verification and fetch after local deletion. Other transports and clean-machine recovery pending. | Local, SFTP, FTPS, S3-compatible storage and Google Drive | Connection tests, host/certificate verification, outage recovery and discovery after rebuild |
 | Backup formats | Planned; not implemented. | gzip, zstd, uncompressed and encrypted incremental repositories | Restore using only the documented archive/key material on a clean machine |
