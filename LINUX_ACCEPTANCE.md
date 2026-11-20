@@ -93,3 +93,21 @@ Use temporary, guest-only network rules if needed for the off-guest check; do no
 open the production host firewall. Positive ownership is a controlled test fixture,
 not evidence of real public ownership or registrar delegation. Never publish its
 private baseline owner credentials or control-state context.
+
+## DNS recovery and monthly backups
+
+On an existing marked disposable guest with private DNS and a spare site slot
+in isolated customer slot 2, run `tests/acceptance_recovery_linux.py` with
+`--allow-disposable-host`. This creates dedicated `.test` fixtures, stops the
+agent while testing, checks BIND UDP/TCP, snapshot restore/removal, actual abrupt
+process exits before/after commit, stopped-service recovery, missing/corrupt zone
+repair and private quarantine. It runs three monthly backup jobs, verifies
+retention and hashes every pre-existing archive. Existing schedules are restored;
+the new monthly fixture is left paused. SELinux must remain enforcing.
+The script deliberately refuses insufficient fixture capacity; it does not
+silently reset existing sites. This proves neither public delegation nor a
+clean-server disaster recovery path.
+
+The source upgrade helper takes the same maintenance lock and refuses a pending
+DNS checkpoint before swapping application files. Its check-only mode remains
+read-only.

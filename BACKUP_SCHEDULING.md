@@ -1,15 +1,17 @@
 # Automatic and SFTP backups
 
-Unreleased 0.4.3 adds per-website daily or weekly schedules and verified SFTP
+Unreleased 0.4.3 adds per-website daily, weekly or monthly schedules and verified SFTP
 copies. Owners and resellers manage websites within their existing account scope;
 customers manage their own isolated websites. This remains website recovery,
 not a whole-account or whole-server migration system.
 
 ## Schedules
 
-In **Backups → Automatic backups**, choose a website, UTC hour, daily/weekly
-frequency, weekly day, retained-copy count (1–4), and enabled/paused state. The
-agent checks due work every 30 seconds. A busy global job defers the due run;
+In **Backups → Automatic backups**, choose a website, UTC hour, daily/weekly/monthly
+frequency, weekly day or monthly day (1–31), retained-copy count (1–4), and enabled/paused state. The
+agent checks due work every 30 seconds. A monthly day missing from a month runs
+on its last day; the requested day is retained for the next month. All times
+remain UTC, including daylight-saving changes. A busy global job defers the due run;
 downtime coalesces into one run instead of replaying every missed interval.
 Locked customers/resellers are skipped with a recorded failure. Removing or
 pausing a schedule retains saved copies. Run now uses the same job path.
@@ -84,13 +86,14 @@ was deleted; the remote inventory is kept independently in the control database.
 Then choose Restore on the local copy. Fetch never restores a website automatically.
 
 Loss of the control database, changing site allocations, a clean-machine restore,
-mail/DNS/certificate/cron recovery and cross-server account import remain pending.
+mail/certificate/cron recovery and cross-server account import remain pending.
 Keep the control-state recovery process separate from these website archives.
-S3, FTPS, monthly policies and encrypted incremental repositories are not delivered.
+DNS record snapshots are covered separately in [DNS_RECOVERY.md](DNS_RECOVERY.md).
+S3, FTPS and encrypted incremental repositories are not delivered.
 
 ## Evidence
 
-`tests/test_backup_policy.py` checks scope, UTC boundaries, persistence, busy jobs,
+`tests/test_backup_policy.py` checks scope, daily/weekly/monthly UTC boundaries, leap years, persistence, busy jobs,
 locked accounts, interrupted runs and retention isolation. `tests/test_offsite.py`
 checks destination validation, secret handling, scoped inventories, failed
 transfers and corrupt downloads. The opt-in `tests/acceptance_data_linux.py`
@@ -98,3 +101,6 @@ exercises real MariaDB, archive restore, a pinned OpenSSH SFTP fixture and sched
 rotation with SELinux enforcing. Its SFTP fixture runs on the same disposable
 guest: this proves the transfer/recovery workflow, not independent-server disaster
 recovery or production capacity. Never run acceptance fixtures on customer servers.
+
+`tests/acceptance_recovery_linux.py` also runs three due monthly archive jobs,
+checks rotation and verifies every pre-existing archive remains intact.

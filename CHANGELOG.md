@@ -12,6 +12,15 @@ unchanged; a 0.4.3 release archive has not yet been published.
 
 ### Added
 
+- Monthly UTC backup schedules with day-of-month selection, month-end clamping
+  and existing scoped retention. Daily and weekly schedules remain compatible.
+- DNS record snapshot/import/export/restore, inactive-zone removal with a recovery
+  copy and forward serial history. Durable checkpoints recover interrupted
+  publications from committed records. Owner service repair rebuilds missing or
+  damaged managed zones, retains original/unreferenced files privately and checks
+  UDP/TCP readiness. Upgrades and profile changes refuse pending DNS recovery.
+  See [DNS_RECOVERY.md](DNS_RECOVERY.md) for bounds and recovery limits.
+
 - An optional owner-installed public authoritative BIND profile with explicit
   interfaces, UDP/TCP readiness checks, private recovery copies and profile
   rollback. Existing zones stay drafts until activation repeats ownership checks
@@ -25,7 +34,7 @@ unchanged; a 0.4.3 release archive has not yet been published.
 - Scoped additional MariaDB users and individual database grants, password
   rotation/removal, read-only table browsing, size reports and bounded SQL
   import/export with failure rollback. See [DATABASE_ADMIN.md](DATABASE_ADMIN.md).
-- Persistent daily/weekly UTC website backup schedules, storage accounting and
+- Persistent daily/weekly/monthly UTC website backup schedules, storage accounting and
   rotation after success. Owner-configured SFTP destinations use pinned host
   keys, round-trip hash verification and recovery after local archive deletion.
   See [BACKUP_SCHEDULING.md](BACKUP_SCHEDULING.md) for limits and configuration.

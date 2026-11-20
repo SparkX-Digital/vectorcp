@@ -41,7 +41,8 @@ Implement mailboxes, routing, quotas, TLS, antispam, deliverability checks and a
 webmail path. Provide public authoritative DNS, record lifecycle and DNSSEC with
 clear delegation and network configuration. The Unreleased optional public BIND
 profile adds explicit activation and diagnostics; independent delegation,
-multi-nameserver availability, DNSSEC and DNS backup/recovery remain open.
+multi-nameserver availability and DNSSEC remain open. Managed DNS snapshots and
+interrupted-change recovery are implemented; independent-server recovery remains open.
 Current package flags do not provide a working mail service.
 
 Complete when external mail delivery and public DNS behavior are independently
@@ -50,8 +51,8 @@ verified, tenant boundaries hold and backup/restore includes these services.
 ## 4. Developer and recovery workflows
 
 Add controlled cron, Git deployment, additional supported application runtimes,
-restricted shell/FTP access and migration paths. Extend the Unreleased daily/weekly schedules and verified SFTP recovery with
-monthly policies, other remote transports, incremental repositories and
+restricted shell/FTP access and migration paths. Extend the Unreleased daily/weekly/monthly schedules and verified SFTP recovery with
+other remote transports, incremental repositories and
 independent-server disaster recovery.
 
 Complete when every operation enforces role/ownership and resource limits, and

@@ -113,12 +113,14 @@ also requires stopping active zones. Private previews are rebuilt before restart
 conflicting records or failed validation preserve the previous profile. The
 original private installer refuses to overwrite a public profile.
 
-This remains bounded development tooling. Process death or storage failure
-between database commit and file/service changes is not a crash-atomic operation;
-an owner must inspect state and rebuild the affected zone before relying on it.
-DNSSEC, public parent/glue diagnostics, zone deletion, full consistency repair,
-automatic mail records and multi-node recovery are still pending. Website
-files/SQL backups do not yet contain a restorable DNS control-state backup.
+This remains bounded development tooling. Durable checkpoints now recover
+interrupted publications from committed records; failed recovery pauses DNS
+editing, profile changes and upgrades. Owner service repair, inactive-zone
+removal and separate record snapshots are described in
+[DNS_RECOVERY.md](DNS_RECOVERY.md). DNSSEC, public parent/glue diagnostics,
+automatic mail records and multi-node recovery remain pending. Website files/SQL
+archives do not include these separate DNS snapshots or a full DNS control-state
+backup. Keep independent database/configuration recovery copies.
 
 Configuration follows the [BIND configuration reference](https://bind9.readthedocs.io/en/v9.18.44/reference.html)
 and its [validation tools](https://bind9.readthedocs.io/en/v9.18.44/manpages.html).
