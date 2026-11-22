@@ -7,8 +7,8 @@ authorization checks, recovery behavior and reproducible acceptance evidence.
 
 The [product specification](PRODUCT.md) defines the roles, installation contract
 and release gates. The [capability catalog](CAPABILITIES.md) breaks the full
-scope into customer, reseller and administrator workflows. Updated 20 November
-2026 with Unreleased database/recovery and optional public authoritative DNS workflows. Demo
+scope into customer, reseller and administrator workflows. Updated 22 November
+2026 with Unreleased portable account transfers, database/recovery and optional public authoritative DNS workflows. Demo
 screens reveal controls, but cannot establish undocumented behavior or prove
 that an action works on a real server.
 
@@ -36,7 +36,7 @@ evidence. Features can move between milestones when dependencies require it.
 | Authentication | Partial: authenticator/recovery codes, session management, password policy/rotation, CSRF and throttling. Email account recovery and passkeys pending. | Password hashing, rate limits, session controls, two-factor authentication and recovery | Session fixation, cross-site request forgery, brute-force and recovery tests |
 | Hierarchy | Partial: owner → reseller → customer. Collaborators/nested tiers pending. | Administrator, reseller, customer and collaborator scopes | Cross-account and cross-reseller requests refused in the backend |
 | Branding | Partial: original shared VectorCP identity. Reseller branding pending. | Original VectorCP interface plus reseller identity settings | Consistent branding across login, navigation, emails and reseller views |
-| Accounts | Partial: creation, contact editing, search/details, password resets and atomic selected-account access/plan changes and per-domain bulk website suspension/activation. Termination and migration pending. | Creation, plan changes, suspension, restoration and termination | Idempotent jobs; ownership checks; protected system usernames; explicit destructive workflows |
+| Accounts | Partial: creation, contact editing, search/details, password resets and atomic selected-account access/plan changes and per-domain bulk website suspension/activation. Portable transfers target empty isolated accounts; termination and broader migration pending. | Creation, plan changes, suspension, restoration and termination | Idempotent jobs; ownership checks; protected system usernames; explicit destructive workflows |
 | Plans | Partial: immutable packages and explicit assignment. Dynamic inherited updates pending. | Resource allowances and feature switches, inherited by existing accounts | Changing a plan updates actual enforcement and creation limits |
 | Reseller pools | Partial: reserved customer/site/storage allowances. Traffic and aggregate adjustable cgroups pending. | Shared disk, traffic, account, CPU, memory and process limits; overselling policies | Children cannot escape parent limits; accurate pool accounting and recovery from full pools |
 | Disk quotas | Partial: capped ext4 volumes. Inode ceilings/XFS integration pending. | Byte and inode ceilings on XFS and ext4 | Actual writes fail at limits; enforcement survives reboot |
@@ -90,7 +90,7 @@ evidence. Features can move between milestones when dependencies require it.
 | Remote storage | Partial: owner-configured pinned SFTP, round-trip hash verification and fetch after local deletion. Other transports and clean-machine recovery pending. | Local, SFTP, FTPS, S3-compatible storage and Google Drive | Connection tests, host/certificate verification, outage recovery and discovery after rebuild |
 | Backup formats | Planned; not implemented. | gzip, zstd, uncompressed and encrypted incremental repositories | Restore using only the documented archive/key material on a clean machine |
 | Partial restore | Planned; not implemented. | Account, folder, database, mailbox, DNS, cron and application data | Restore only selected material; unrelated current data remains intact |
-| Migration | Planned; not implemented. | Documented third-party backup formats, remote account transfers and VectorCP exports | Versioned fixtures for each supported transport and backup format |
+| Migration | Partial: [portable v1 exports/imports](ACCOUNT_TRANSFERS.md), resumable uploads, empty-target conflict checks, fresh primary SQL credentials and suspended sites. Other formats, remote transfer, mail and full-machine recovery pending. | Documented third-party backup formats, remote account transfers and VectorCP exports | Versioned fixtures for each supported transport and backup format |
 | Bulk migration | Planned; not implemented. | Accounts, plans and reseller hierarchies; preview, conflicts and progress | Source remains unchanged; partial failures can be resumed and reviewed |
 | API access | Planned; not implemented. | Scoped, revocable tokens with expiry and network restrictions | Ownership, permission, expiry, revocation and replay tests |
 | Billing modules | Planned; not implemented. | WHMCS, Blesta and FOSSBilling provisioning and sign-on | Real supported-version contract tests for lifecycle and plan changes |

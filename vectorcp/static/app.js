@@ -4,6 +4,8 @@ const modal = document.querySelector('#modal');
 const names = {databases:'Databases',security:'Account & security',overview:'Tools',sites:'Websites & domains',hosting:'Apps & databases',files:'File manager',accounts:'Accounts',plans:'Hosting plans',dns:'DNS zones',backups:'Backups',audit:'Activity log',status:'Release status'};
 const paths = {overview:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',sites:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18Z"/>',files:'<path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/>',accounts:'<circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v3"/>',backups:'<path d="M5 8H3v13h18V8h-2M3 3h18v5H3ZM12 12v5m-3-3 3 3 3-3"/>',audit:'<path d="M5 3h10l4 4v14H5ZM9 11h6M9 15h6M15 3v5h4"/>',status:'<path d="m12 3 8 4v6c0 4-8 8-8 8s-8-4-8-8V7Z"/><path d="m8 12 3 3 5-6"/>',plus:'<path d="M12 5v14M5 12h14"/>',arrow:'<path d="M4 12h15m-5-5 5 5-5 5"/>',refresh:'<path d="M20 5v5h-5M4 19v-5h5M19 9a8 8 0 0 0-13-4M5 15a8 8 0 0 0 13 4"/>',logout:'<path d="M9 4H4v16h5m5-4 4-4-4-4m-6 4h14"/>',check:'<path d="m5 12 4 4L20 5"/>',close:'<path d="m6 6 12 12M6 18 18 6"/>',server:'<rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6.5h.1M7 17.5h.1"/>',cpu:'<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 1v5m6-5v5M9 18v5m6-5v5M1 9h5m-5 6h5m12-6h5m-5 6h5"/>',disk:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/>',file:'<path d="M5 3h9l5 5v13H5ZM14 3v6h5"/>',download:'<path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/>',up:'<path d="M12 20V4m-6 6 6-6 6 6"/>',lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/>'};
 paths.security=paths.lock;
+names.transfers='Account transfers';
+paths.transfers=paths.backups;
 paths.hosting=paths.server;
 paths.databases=paths.disk;
 paths.plans=paths.disk;
@@ -25,6 +27,7 @@ function toolGroups(){
     ['accounts','List accounts','Manage customers, access and hosting allowances.','customers resellers users suspend'],
     ['new-account','Create account','Add a customer'+(state.overview.user.role==='admin'?' or reseller':'')+' with a hosting plan.','new user reseller','action'],
     ['plans','Hosting plans','Review packages, reservations and included features.','packages quotas limits'],
+    ['transfers','Account transfers','Export and inspect portable account archives.','migration import export move server'],
     ['new-plan','Create hosting plan','Define a package for new or existing accounts.','add package quota','action']]});
   groups.push({title:'Websites & domains',icon:'sites',tools:[
     ['sites','Websites & domains','View domains, owners and website status.','domain suspend activate'],
@@ -73,8 +76,8 @@ async function api(method,data={},download=false){
   if(!response.ok){const body=await response.json().catch(()=>({error:'The server could not complete the request.'}));const err=new Error(body.error);err.status=response.status;throw err;}
   return download?response.blob():response.json();
 }
-async function downloadBackup(id){
-  const info=await api('backups.describe',{id});
+async function downloadBackup(id,prefix='backups'){
+  const info=await api(prefix+'.describe',{id});
   const size=262144,parts=new Array(Math.ceil(info.bytes/size));
   let cursor=0,done=0,lastNotice=0;
   async function worker(){
@@ -82,7 +85,7 @@ async function downloadBackup(id){
       const index=cursor++,offset=index*size;
       let result;
       for(let retry=0;retry<3;retry++){
-        try{result=await api('backups.chunk',{id,offset});break;}catch(err){if(retry===2||err.status===401||err.status===404)throw err;}
+        try{result=await api(prefix+'.chunk',{id,offset});break;}catch(err){if(retry===2||err.status===401||err.status===404)throw err;}
       }
       const raw=atob(result.base64),part=Uint8Array.from(raw,c=>c.charCodeAt(0));
       if(part.length!==Math.min(size,info.bytes-offset))throw new Error('The backup download was incomplete. Please retry.');
@@ -105,7 +108,7 @@ function auth(setup=false){
 }
 function shell(){
   const o=state.overview,u=o.user;
-  const groups=u.password_change_required?[['Account',['security']]]:[['Workspace',['overview','sites','hosting','databases','files','dns']],...(managesCustomers()?[['Account management',['accounts','plans']]]:[]),['Operations',['security','backups','audit','status']]];
+  const groups=u.password_change_required?[['Account',['security']]]:[['Workspace',['overview','sites','hosting','databases','files','dns']],...(managesCustomers()?[['Account management',['accounts','plans','transfers']]]:[]),['Operations',['security','backups','audit','status']]];
   document.body.classList.remove('navigation-open');
   app.innerHTML=`<a class="skip-link" href="#page">Skip to main content</a><div class="shell"><aside class="sidebar" id="workspace-navigation" aria-label="Workspace navigation"><div class="sidebar-heading">${brand()}<button class="icon-button close-navigation" data-action="close-navigation" aria-label="Close navigation">${icon('close')}</button></div><div class="workspace-label">${workspaceName()}</div><nav aria-label="Main navigation">${groups.map(([label,pages])=>`<div class="nav-section"><div class="nav-label">${label}</div>${pages.map(p=>`<button class="nav-item ${state.page===p?'current':''}" ${state.page===p?'aria-current="page"':''} data-page="${p}">${icon(p)}<span>${names[p]}</span></button>`).join('')}</div>`).join('')}</nav><div class="sidebar-bottom"><span class="version-label">Development · ${e(o.version)}</span><div class="person"><span class="avatar">${e(u.name.slice(0,1).toUpperCase())}</span><div class="person-copy"><div class="person-name">${e(u.name)}</div><div class="person-role">${e(u.role==='admin'?'Server owner':u.role)}</div></div></div></div></aside><button class="navigation-shade" data-action="close-navigation" aria-label="Close navigation" tabindex="-1"></button><main class="main"><header class="topbar"><button class="icon-button open-navigation" data-action="open-navigation" aria-label="Open navigation" aria-controls="workspace-navigation" aria-expanded="false">${icon('overview')}</button><div class="breadcrumb">${workspaceName()}<span>/ ${names[state.page]}</span></div><form class="tool-search" data-form="tool-search" role="search"><label class="sr-only" for="tool-search">Search tools</label><input id="tool-search" type="search" name="query" placeholder="Search tools…" value="${e(toolQuery)}" autocomplete="off"><button type="submit" class="icon-button" aria-label="Search tools">${icon('arrow')}</button></form><div class="top-actions"><button class="icon-button" data-action="refresh" aria-label="Refresh current page">${icon('refresh')}</button><button class="icon-button" data-action="logout" aria-label="Sign out">${icon('logout')}</button></div></header>${o.development?`<div class="development-banner">${icon('status')}Local validation instance. Websites are not published to the Internet.</div>`:''}<div class="page-loading" id="page-loading" role="status" hidden></div><div class="content" id="page" tabindex="-1"></div></main></div>`;
   render();
@@ -179,6 +182,7 @@ function render(){
   }else{
     html=heading('Release & service status','VectorCP · an open-source hosting control panel.')+`<div class="callout"><strong>Development release: review the available tools and limits.</strong>The implemented capabilities below are available in this release. Availability also depends on server configuration and account permissions. The remaining systems are still planned; the public capability catalog records the wider scope.</div><div class="columns"><section class="panel"><div class="panel-head"><h2>Available in this release</h2><span class="pill">Implemented</span></div><div class="panel-body feature-list">${o.capabilities.map(x=>`<div>${icon('check')}${e(x)}</div>`).join('')}</div></section><section class="panel"><div class="panel-head"><h2>Further work</h2><span class="pill gray">Planned</span></div><div class="panel-body feature-list">${o.planned.map(x=>`<div>${icon('clock')}${e(x)}</div>`).join('')}</div></section></div><section class="panel"><div class="panel-head"><h2>Observed services</h2></div>${o.services.length?`<div class="panel-body feature-list">${o.services.map(s=>`<div>${icon('server')}<strong>${e(s.name)}</strong><span class="pill ${s.status==='active'?'':'gray'}">${e(s.status)}</span></div>`).join('')}</div>`:empty('Service status is unavailable locally.','Linux service checks run on the deployed server.','','server')}</section>`;
   }
+  if(state.page==='transfers')html=accountTransferPanel();
   page.innerHTML=html+`<footer class="workspace-footer"><span>VectorCP · Your hosting. Your control.</span><span>Release ${e(o.version)} · ${o.development?'Local validation':'Server workspace'}</span></footer>`;
   document.querySelectorAll('.table-wrap').forEach(wrap=>{wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label',(wrap.closest('.panel')?.querySelector('h2')?.textContent||names[state.page])+' table; scroll horizontally for more columns');});
   document.querySelectorAll('th').forEach(th=>{th.scope='col';if(!th.textContent.trim()){th.textContent='Actions';}});
@@ -209,6 +213,7 @@ async function loadPage(page=state.page){
     if(siteId!==state.siteId){state.folder='';state.file=null;state.fileSearch='';}
     Object.assign(state,{page,overview:o,sites:sites.sites,events:events.events,accounts:accounts.accounts,plans:plans.plans,pool:plans.pool,jobs:jobs.jobs,dns,siteId});
     state.accountTotal=accounts.total;
+    if(page==='transfers'){if(!manages)throw new Error('Account transfers require an owner or authorized reseller.');state.accountTransfers=(await api('transfers.list')).transfers;}
     if(page==='security'){state.security=await api('security.status');const [profile,sessions]=forced?[null,{sessions:[]}]:await Promise.all([api('profile.get'),api('security.sessions')]);state.profile=profile;state.sessions=sessions.sessions;}
     if(request!==pageRequest)return;
     if(backups){const [policies,destinations,remote]=await Promise.all([api('backups.schedules'),api('backups.destinations'),api('backups.offsite.list',{offset:state.offsiteOffset||0})]);if(request!==pageRequest)return;Object.assign(state,{backups:backups.backups,schedules:policies.schedules,destinations:destinations.destinations,offsiteCopies:remote.copies,offsiteMore:remote.more});}
@@ -268,6 +273,7 @@ document.addEventListener('click',async event=>{
   try{
     if(button.dataset.page){if(navigationBusy)return;navigationBusy=true;try{setNavigation(false);await loadPage(button.dataset.page);focusPage();}finally{navigationBusy=false;}return;}
     const action=button.dataset.action;if(!action)return;
+    if(await accountTransferAction(action,button))return;
     if(action==='open-navigation'){setNavigation(true);return;}
     if(action==='close-navigation'){setNavigation(false);document.querySelector('[data-action="open-navigation"]').focus();return;}
     if(action==='toggle-group'){const body=document.getElementById(button.getAttribute('aria-controls'));body.hidden=!body.hidden;button.setAttribute('aria-expanded',String(!body.hidden));return;}
@@ -469,6 +475,7 @@ document.addEventListener('submit',async event=>{
   const button=form.querySelector('button[type="submit"]');button.disabled=true;form.querySelector('.form-error').textContent='';
   try{
     const data=Object.fromEntries(new FormData(form));const kind=form.dataset.form;
+    if(await accountTransferSubmit(kind,form,data))return;
     if(kind==='login'||kind==='bootstrap'){if(kind==='login'&&['/admin','/reseller','/customer'].includes(location.pathname))data.entry=location.pathname.slice(1);const result=await api(kind,data);if(result.mfa_required){const field=form.querySelector('#login-factor');field.hidden=false;field.querySelector('input').required=true;field.querySelector('input').focus();return;}form.reset();state.csrf=result.csrf;setupToken='';await loadPage('overview');return;}
     if(await dataToolSubmit(kind,form,data))return;
     if(await dnsToolSubmit(kind,form,data))return;

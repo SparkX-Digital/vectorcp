@@ -108,6 +108,25 @@ The script deliberately refuses insufficient fixture capacity; it does not
 silently reset existing sites. This proves neither public delegation nor a
 clean-server disaster recovery path.
 
+## Portable account transfers
+
+On a marked disposable guest with the earlier native account/SQL fixtures, run:
+
+```sh
+sudo python3 tests/acceptance_transfers_linux.py --allow-disposable-host
+```
+
+The driver exports isolated customer slot 1, provisions a fresh destination
+allocation and uses a separate control database to represent another server.
+It verifies archive/file/SQL integrity, table row checksums, scoped credentials,
+injected SQL failure rollback, unchanged source/account records, suspended Nginx
+responses and explicit PHP maintenance-stop recovery after an interrupted-export
+checkpoint. The guest remains SELinux enforcing. It retains private result JSON,
+archives and test allocations for inspection; it never changes public routing.
+It needs enough free allocation slots/storage and stops/restarts the guest agent.
+Never run it on an occupied production host. These checks do not establish WAN
+transport, mail, hardware power-cut recovery or full-machine disaster recovery.
+
 The source upgrade helper takes the same maintenance lock and refuses a pending
 DNS checkpoint before swapping application files. Its check-only mode remains
 read-only.

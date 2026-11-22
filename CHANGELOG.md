@@ -12,6 +12,13 @@ unchanged; a 0.4.3 release archive has not yet been published.
 
 ### Added
 
+- Portable account v1 export, resumable checksummed upload, destination
+  inspection and import into an existing empty isolation allocation. Primary
+  SQL imports use fresh scoped credentials; managed WordPress connection lines
+  are remapped. Imported sites stay suspended, DNS stays in recovery copies and
+  schedules are paused. Durable allocation journals support failure rollback and
+  explicit owner recovery after interruption. See
+  [ACCOUNT_TRANSFERS.md](ACCOUNT_TRANSFERS.md) for limits and excluded services.
 - Monthly UTC backup schedules with day-of-month selection, month-end clamping
   and existing scoped retention. Daily and weekly schedules remain compatible.
 - DNS record snapshot/import/export/restore, inactive-zone removal with a recovery

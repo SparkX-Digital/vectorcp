@@ -36,6 +36,7 @@ jobs:
           node --check vectorcp/static/routing-form.js
           node --check vectorcp/static/data-tools.js
           node --check vectorcp/static/dns-tools.js
+          node --check vectorcp/static/account-transfers.js
           node --test tests/test_site_batch.js
           bash -n deploy/install.sh
           bash -n deploy/hosting-install.sh

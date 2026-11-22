@@ -1,3 +1,43 @@
+# Unreleased 0.4.3 portable account transfers
+
+Verified 22 November 2026. The development catalog records **253 workflows:
+53 Available, 28 Partial and 172 Planned**. Portable v1 export is available
+within [documented bounds](ACCOUNT_TRANSFERS.md); broader migration and full
+disaster recovery remain partial. Published 0.4.2 artifacts are unchanged.
+
+- All **201 Python unit/HTTP checks** pass on Python 3.13, including **18 transfer
+  checks**. The transfer checks also pass on the native Python 3.9 guest. Ten
+  JavaScript batch checks, JavaScript/shell syntax and deterministic source
+  packaging checks pass.
+- Seven [opt-in native acceptance groups](tests/acceptance_transfers_linux.py)
+  pass on AlmaLinux 9.8, MariaDB 10.11, Nginx and SELinux enforcing: multi-site
+  files/primary-SQL export; injected SQL-failure rollback; file hashes, table/row
+  checksums, fresh credentials and SQL privilege denials; destination account and
+  unrelated-record preservation; actual suspended Nginx responses; explicit
+  recovery of a recorded source PHP maintenance stop; and source-site preservation.
+- The native test uses a second control database and a different real customer
+  volume/Unix identity on one guest to represent the destination. A deterministic
+  interrupted-export checkpoint is retained across Engine initialization and
+  recovered through the owner API. Unit tests simulate an interrupted import and
+  verify the account hold and explicit rollback. This is not a hardware power-cut
+  test, a two-machine WAN transfer or a complete clean-server restore.
+- Browser checks exercise export, SHA-256-verified download, upload, conflict
+  review, valid inspection, wrong-target confirmation rejection and suspended
+  import. Layout fits widths 320, 390, 463, 768, 1280 and 1920 without page
+  overflow. Actions measure 44 px on mobile and 40 px on desktop; upload dialogs
+  fit 320/390/1280 widths without horizontal overflow.
+- A private compatibility build rehearses the occupied integration layout on the
+  disposable guest. The canonical installer and normal upgrade helper retain
+  their documented fresh-install layout contract.
+
+Managed WordPress connection-line rewriting is covered by unit checks; a full
+WordPress application migration has not been accepted separately. Mail, extra
+SQL identities/routines/events, other archive formats, remote/bulk migration,
+independent DNS delegation/recovery, broader capacity and an independent security
+audit remain open. Imported applications require review before activation.
+
+---
+
 # Unreleased 0.4.3 DNS recovery and monthly retention
 
 Verified 20 November 2026. The development catalog records **253 workflows:
