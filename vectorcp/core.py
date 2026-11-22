@@ -185,6 +185,10 @@ class Engine:
         with self.db() as db:
             migrate_offsite(db)
         self.offsite = Offsite(self)
+        from .transfers import Transfers, migrate as migrate_transfers
+        with self.db() as db:
+            migrate_transfers(db)
+        self.transfers = Transfers(self)
         os.chmod(self.db_path, 0o600)
 
     @contextlib.contextmanager
@@ -307,12 +311,14 @@ class Engine:
         from .backup_policy import OPERATIONS as policy_operations, READ_ONLY as policy_reads
         from .offsite import OPERATIONS as offsite_operations, READ_ONLY as offsite_reads
         from .dns import OPERATIONS as dns_operations, READ_ONLY as dns_reads
+        from .transfers import OPERATIONS as transfer_operations, READ_ONLY as transfer_reads
         allowed = {"overview", "accounts.list", "accounts.create", "accounts.active", "sites.list", "sites.create", "sites.active",
                    "files.list", "files.read", "files.write", "files.mkdir", "backups.list", "backups.create", "backups.download", "audit", "logout", "hosting.enable", "hosting.php", "hosting.wordpress", "hosting.tls", "databases.create", "databases.list", "databases.credentials", "jobs.list", "backups.full", "backups.restore", "backups.delete", "backups.describe", "backups.chunk", "plans.list", "plans.create", "plans.active", "plans.assign", "dns.list", "dns.create", "dns.save", "dns.delete", "dns.export", "dns.verify"}
         allowed |= file_operations | security_operations | routing_operations | {'accounts.inspect', 'accounts.update', 'accounts.bulk'}
         allowed |= database_operations | policy_operations
         allowed |= offsite_operations
         allowed |= dns_operations
+        allowed |= transfer_operations
         if method not in allowed:
             raise Fault("Unknown operation.", 404)
         read_only = method in {"overview", "accounts.list", "sites.list", "files.list", "files.read", "backups.list", "backups.download", "audit", "jobs.list", "databases.list", "databases.credentials", "backups.describe", "backups.chunk", "plans.list", "dns.list", "dns.export"}
@@ -320,6 +326,7 @@ class Engine:
         read_only = read_only or method in database_reads | policy_reads
         read_only = read_only or method in offsite_reads
         read_only = read_only or method in dns_reads
+        read_only = read_only or method in transfer_reads
         with self.lock, self.db() as db:
             actor = self.authenticate(db, request.get("token"))
             if actor['password_change_required'] and method not in {'overview', 'security.status', 'security.password', 'logout'}:
@@ -329,6 +336,8 @@ class Engine:
                 if not isinstance(csrf, str) or not hmac.compare_digest(csrf, actor["csrf"]):
                     raise Fault("Request verification failed. Refresh and try again.", 403)
             from .distribution import scope, manages
+            if method in transfer_operations:
+                return self.transfers.dispatch(db, actor, method, data)
             if method in offsite_operations:
                 return self.offsite.dispatch(db, actor, method, data)
             if method in policy_operations:
@@ -423,6 +432,7 @@ class Engine:
         return self.sites / str(site["id"]) / "public"
 
     def site_idle(self, db, site):
+        self.transfers.idle(db, site['user_id'])
         if db.execute("SELECT 1 FROM jobs j WHERE j.user_id=? AND j.status IN ('queued','running')", (site['user_id'],)).fetchone():
             raise Fault('A hosting operation is running for this customer. Try again when it finishes.', 409)
 
@@ -455,6 +465,7 @@ class Engine:
         if not manages(db, actor, owner_id):
             raise Fault('Choose one of your customer accounts.', 404)
         owner = db.execute("SELECT * FROM users WHERE id=? AND active=1", (owner_id,)).fetchone()
+        self.transfers.idle(db, owner_id)
         if not available(db, owner) or owner['is_reseller']:
             raise Fault('Choose an active customer account.')
         if db.execute("SELECT 1 FROM jobs WHERE user_id=? AND status IN ('queued','running')", (owner_id,)).fetchone():
@@ -968,5 +979,5 @@ class Engine:
                 "counts": {"sites": count, "active": active, "accounts": db.execute("SELECT COUNT(*) FROM users WHERE role='customer' AND is_reseller=0" + (" AND parent_id=?" if actor['role']=='reseller' else ''), (actor['id'],) if actor['role']=='reseller' else ()).fetchone()[0] if actor['role'] in ('admin','reseller') else None},
                 "features": self.distribution.features(db, actor), "reseller_pool": self.distribution.usage(db, actor) if actor["role"] == "reseller" else None,
                 "services": services, "usage_bytes": self.account_usage(db, actor["id"]),
-                "capabilities": (["Isolated customer storage and processes", "PHP 8.3", "Private MariaDB databases, scoped users and table browser", "WordPress installer", "Customer domain HTTPS", "SQL import/export and local files/database recovery", "UTC backup schedules and verified SFTP copies"] if self.hosting.enabled else []) + ["Website redirects, HTTPS preference and static error pages", "Active-session inventory and remote revocation", "Authenticator app and single-use recovery codes", "Password policy, resets and forced rotation", "Contact editing and scoped account search", "Selected-account access and plan changes", "Folder copy, batch actions and recoverable trash", "Hidden-file controls and permission editing", "Bounded ZIP creation and safe extraction", "DNS zone editor, export and private authoritative preview", "Public TXT domain ownership checks", "Reseller accounts and delegated customers", "Hosting plans and reserved allowances", "Owner locks and scoped reseller access", "Sign-in and account ownership", "Customer panel accounts", "Static websites", "Text file editor", "Site suspension", "File storage allowances", "Site export downloads", "Audit history"],
-                "planned": ["Public mail service", "Public DNS delegation", "Nested resellers and white-label branding", "Shell and application runtimes", "Encrypted incremental and whole-account backups", "Billing and AI integrations"]}
+                "capabilities": (["Isolated customer storage and processes", "PHP 8.3", "Private MariaDB databases, scoped users and table browser", "WordPress installer", "Customer domain HTTPS", "SQL import/export and local files/database recovery", "UTC backup schedules and verified SFTP copies", "Portable account transfers into empty isolated customers"] if self.hosting.enabled else []) + ["Website redirects, HTTPS preference and static error pages", "Active-session inventory and remote revocation", "Authenticator app and single-use recovery codes", "Password policy, resets and forced rotation", "Contact editing and scoped account search", "Selected-account access and plan changes", "Folder copy, batch actions and recoverable trash", "Hidden-file controls and permission editing", "Bounded ZIP creation and safe extraction", "DNS zone editor, export and private authoritative preview", "Public TXT domain ownership checks", "Reseller accounts and delegated customers", "Hosting plans and reserved allowances", "Owner locks and scoped reseller access", "Sign-in and account ownership", "Customer panel accounts", "Static websites", "Text file editor", "Site suspension", "File storage allowances", "Site export downloads", "Audit history"],
+                "planned": ["Public mail service", "Public DNS delegation", "Nested resellers and white-label branding", "Shell and application runtimes", "Encrypted incremental and full-machine recovery", "Billing and AI integrations"]}
