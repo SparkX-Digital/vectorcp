@@ -225,6 +225,11 @@ class TransferTests(unittest.TestCase):
             row=self.call(self.admin,'transfers.get',{'id':ident});self.assertEqual(row['status'],'needs_inspection');self.assertTrue(row['recoverable'])
             self.refused(409,lambda:self.call(self.admin,'sites.create',{'domain':'not-now.example.com','user_id':self.target['id']}))
             self.refused(409,lambda:self.call(self.admin,'transfers.delete',{'id':ident}))
+            with self.engine.db() as db:reserved=db.execute('SELECT id FROM sites WHERE user_id=?',(self.target['id'],)).fetchone()[0]
+            with patch.object(self.engine.hosting,'enabled',True),patch('vectorcp.core.threading.Thread') as queue:
+                for method in ('hosting.php','hosting.wordpress','hosting.tls','databases.create','backups.full'):
+                    self.refused(409,lambda:self.call(self.admin,method,{'site_id':reserved}))
+                queue.assert_not_called()
             self.call(self.admin,'transfers.rollback',{'id':ident,'confirm_username':'destination'})
             self.assertEqual(self.call(self.admin,'transfers.get',{'id':ident})['status'],'rolled_back')
 
