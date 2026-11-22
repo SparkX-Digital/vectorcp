@@ -315,3 +315,5 @@ dialog::backdrop { background:#102b2473; }
 .database-preview { max-height:50vh; margin-bottom:16px; }
 .database-preview td { max-width:240px; white-space:pre-wrap; overflow-wrap:anywhere; }
 @media(max-width:600px) { .data-permissions { grid-template-columns:minmax(0,1fr); } .data-permissions label { min-height:44px; } }
+
+.account-transfer-size { white-space:nowrap; }
