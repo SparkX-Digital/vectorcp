@@ -862,6 +862,7 @@ class Engine:
                 raise Fault('This website already has a database.', 409)
             if action == 'hosting.wordpress' and (site['runtime'] != 'static' or site['database_name']):
                 raise Fault('Choose a fresh static website without a database.', 409)
+        self.transfers.idle(db, owner['id'])
         if db.execute("SELECT 1 FROM jobs WHERE status IN ('queued','running')").fetchone():
             raise Fault('A hosting operation is already running. Wait for it to finish.', 409)
         job_id, now = secrets.token_hex(12), int(time.time())
