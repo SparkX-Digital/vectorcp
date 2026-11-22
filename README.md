@@ -24,6 +24,10 @@ The development source also includes [website routing](WEBSITE_ROUTING.md):
 bounded redirects, HTTPS preferences and static HTML error pages, with ownership
 checks, stale-form protection and Nginx validation/rollback.
 
+Development [account transfers](ACCOUNT_TRANSFERS.md) export portable v1 archives
+and import into empty, isolated customers after checksum/conflict checks. Sites
+stay suspended for review; mail and full-machine recovery remain pending.
+
 ## Project
 
 Maintained by [SparkX Digital](https://www.sparkxdigital.co.uk/).

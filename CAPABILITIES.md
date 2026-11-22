@@ -1,6 +1,6 @@
 # VectorCP capability catalog
 
-Updated 20 November 2026. This catalog defines the intended scope for a free,
+Updated 22 November 2026. This catalog defines the intended scope for a free,
 self-hosted hosting panel. It consolidates customer tools, reseller operations
 and server administration into original product requirements. It is not a
 claim that every tool is implemented.
@@ -25,6 +25,11 @@ The optional Unreleased public authoritative profile and its limits are describe
 in [PUBLIC_DNS.md](PUBLIC_DNS.md). Managed zone deletion, snapshots and consistency
 repair are described in [DNS_RECOVERY.md](DNS_RECOVERY.md). External delegation,
 DNSSEC and independent nameserver recovery remain open.
+
+Unreleased [portable account transfers](ACCOUNT_TRANSFERS.md) include bounded
+multi-site files and primary SQL, empty-target inspection, suspended imports and
+creation-journal recovery. Other archive formats, remote transports, mail and
+full-machine recovery remain open.
 
 Stable IDs identify work items and acceptance evidence. A row is a user workflow,
 not necessarily a screen or a single development task. Read [PRODUCT.md](PRODUCT.md)
@@ -331,7 +336,7 @@ preference, suspension precedence, failure recovery and acceptance scope.
 | VCP-1313 | Compression formats and integrity checks | Partial |
 | VCP-1314 | Restore selected folder, database or mailbox | Planned |
 | VCP-1315 | Restore DNS, certificates, cron and app configuration | Partial |
-| VCP-1316 | Whole-account export/import and disaster recovery | Planned |
+| VCP-1316 | Whole-account export/import and disaster recovery | Partial |
 
 ## Metrics, logs and notifications
 
@@ -410,14 +415,14 @@ preference, suspension precedence, failure recovery and acceptance scope.
 
 | ID | Capability | Status |
 | --- | --- | --- |
-| VCP-1701 | Import documented account archive formats | Planned |
+| VCP-1701 | Import documented account archive formats | Partial |
 | VCP-1702 | Remote SSH/API account transfer | Planned |
 | VCP-1703 | Bulk transfer with inventory and mapping | Planned |
-| VCP-1704 | Reseller, package and ownership mapping | Planned |
+| VCP-1704 | Reseller, package and ownership mapping | Partial |
 | VCP-1705 | Convert an addon domain into its own account | Planned |
-| VCP-1706 | Review transfer logs, conflicts and retries | Planned |
-| VCP-1707 | Verify files, databases, mail and DNS after import | Planned |
-| VCP-1708 | Export a portable VectorCP account | Planned |
+| VCP-1706 | Review transfer logs, conflicts and retries | Partial |
+| VCP-1707 | Verify files, databases, mail and DNS after import | Partial |
+| VCP-1708 | Export a portable VectorCP account | Available |
 
 ## Preferences and extensibility
 
