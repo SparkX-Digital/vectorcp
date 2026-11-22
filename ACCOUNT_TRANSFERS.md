@@ -33,7 +33,8 @@ unrecognized WordPress connection definitions stop the import. No PHP is execute
 by the importer. Review all imported application code before activation.
 
 Excluded: source login hashes, sessions, authentication keys, certificates and
-private keys, extra database users/grants, email, cron/Git jobs, backup/trash
+private keys, extra database users/grants, stored routines and scheduled database
+events, email, cron/Git jobs, backup/trash
 history, offsite destinations and source ownership/package recreation. General
 application connection settings are not rewritten. Public DNS publication and
 ownership/delegation are separate workflows. This is not a complete disaster
