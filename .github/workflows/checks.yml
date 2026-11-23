@@ -37,11 +37,13 @@ jobs:
           node --check vectorcp/static/data-tools.js
           node --check vectorcp/static/dns-tools.js
           node --check vectorcp/static/account-transfers.js
+          node --check vectorcp/static/mail-tools.js
           node --test tests/test_site_batch.js
           bash -n deploy/install.sh
           bash -n deploy/hosting-install.sh
           bash -n deploy/dns-install.sh
           bash -n deploy/dns-public.sh
+          bash -n deploy/mail-install.sh
           bash -n deploy/public-https.sh
           python deploy/package.py --output "$RUNNER_TEMP/VectorCP-source.zip"
           cd "$RUNNER_TEMP"

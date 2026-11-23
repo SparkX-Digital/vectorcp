@@ -18,6 +18,7 @@ from .databases import OPERATIONS as DATABASE_OPERATIONS
 from .backup_policy import OPERATIONS as POLICY_OPERATIONS
 from .offsite import OPERATIONS as OFFSITE_OPERATIONS
 from .dns import OPERATIONS as DNS_OPERATIONS
+from .mail import OPERATIONS as MAIL_OPERATIONS
 
 STATIC = Path(__file__).with_name("static")
 ROUTES = {"/admin": ("index.html", "text/html; charset=utf-8"), "/reseller": ("index.html", "text/html; charset=utf-8"), "/customer": ("index.html", "text/html; charset=utf-8"), "/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"),
@@ -25,6 +26,7 @@ ROUTES = {"/admin": ("index.html", "text/html; charset=utf-8"), "/reseller": ("i
           "/data-tools.js": ("data-tools.js", "text/javascript; charset=utf-8"),
           "/dns-tools.js": ("dns-tools.js", "text/javascript; charset=utf-8"),
           "/account-transfers.js": ("account-transfers.js", "text/javascript; charset=utf-8"),
+          "/mail-tools.js": ("mail-tools.js", "text/javascript; charset=utf-8"),
           "/routing-form.js": ("routing-form.js", "text/javascript; charset=utf-8"),
           "/brand.svg": ("brand.svg", "image/svg+xml"), "/brand-light.svg": ("brand-light.svg", "image/svg+xml")}
 OPERATIONS = {"overview", "accounts.list", "accounts.create", "accounts.active", "sites.list", "sites.create", "sites.active",
@@ -35,6 +37,7 @@ OPERATIONS |= FILE_OPERATIONS | SECURITY_OPERATIONS | ROUTING_OPERATIONS | {'acc
 OPERATIONS |= DATABASE_OPERATIONS | POLICY_OPERATIONS
 OPERATIONS |= OFFSITE_OPERATIONS
 OPERATIONS |= DNS_OPERATIONS
+OPERATIONS |= MAIL_OPERATIONS
 from .transfers import OPERATIONS as TRANSFER_OPERATIONS
 OPERATIONS |= TRANSFER_OPERATIONS
 

@@ -26,7 +26,12 @@ checks, stale-form protection and Nginx validation/rollback.
 
 Development [account transfers](ACCOUNT_TRANSFERS.md) export portable v1 archives
 and import into empty, isolated customers after checksum/conflict checks. Sites
-stay suspended for review; mail and full-machine recovery remain pending.
+stay suspended for review; mail transfer and full-machine recovery remain pending.
+
+The optional development [mail profile](MAIL_HOSTING.md) adds owner-approved
+mail domains, scoped mailboxes, SMTP/IMAPS with TLS, quotas and interruption
+recovery. Webmail, aliases, filtering, signing, mail backup and Internet delivery
+acceptance remain open. Application upgrades do not install or activate mail.
 
 ## Project
 
@@ -89,7 +94,8 @@ See the [roadmap](ROADMAP.md) for the next capability gates.
 The owner/admin account remains a control-plane identity; create application
 sites under an isolated customer. Existing static accounts remain usable.
 Locking panel access signs a customer out; website suspension is a separate action.
-Mail delivery is not implemented. The stable 0.4.2 DNS service provides a private
+The optional Unreleased mail profile requires a separate owner installation;
+read [MAIL_HOSTING.md](MAIL_HOSTING.md) before activating it. The stable 0.4.2 DNS service provides a private
 preview and export; its editor does not change public DNS. Unreleased 0.4.3 adds
 an owner-installed public authoritative profile. Existing zones remain drafts
 until explicit activation repeats ownership verification. Read [PUBLIC_DNS.md](PUBLIC_DNS.md)
@@ -225,7 +231,7 @@ See `VERIFICATION.md` for the exact live evidence and remaining limitations.
 
 ## Remaining product scope
 
-Dynamic inherited plans, nested resellers, mail/webmail, full public DNS acceptance/DNSSEC, customer shells
+Dynamic inherited plans, nested resellers, webmail/aliases/filtering/signing and mail backup, full public DNS acceptance/DNSSEC, customer shells
 and FTP, encrypted incremental backups, additional remote transports, arbitrary application runtimes,
 cron/Git, migration, WAF/scanning, billing, update/rollback management and AI/MCP
 integrations remain further work. Independent security review, sustained load,
