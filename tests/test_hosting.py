@@ -1,4 +1,5 @@
 import io
+from pathlib import Path
 import subprocess
 import sys
 import tarfile
@@ -48,7 +49,8 @@ class HostingBoundaries(unittest.TestCase):
 
     def test_profile_maintenance_refuses_new_jobs(self):
         self.engine.development = False
-        with patch('vectorcp.core.Path.exists', return_value=True):
+        exists = Path.exists
+        with patch('vectorcp.core.Path.exists', lambda path: True if path == Path('/run/vectorcp-profile-maintenance') else exists(path)):
             self.refused(409, lambda: self.call(self.admin, 'hosting.enable', {'id': self.alice['user']['id']}))
         with self.engine.db() as db:
             self.assertEqual(db.execute('SELECT COUNT(*) FROM jobs').fetchone()[0], 0)

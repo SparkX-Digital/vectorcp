@@ -64,13 +64,21 @@ class HttpBoundaryTests(unittest.TestCase):
             self.assertIn("frame-ancestors 'none'",headers['Content-Security-Policy'])
 
     def test_app_and_assets_have_csp_and_nosniff(self):
-        for path in ("/", "/app.js", "/site-batch.js", "/routing-form.js", "/data-tools.js", "/dns-tools.js", "/style.css", "/favicon.svg", "/brand.svg", "/brand-light.svg"):
+        for path in ("/", "/app.js", "/site-batch.js", "/routing-form.js", "/data-tools.js", "/dns-tools.js", "/account-transfers.js", "/mail-tools.js", "/style.css", "/favicon.svg", "/brand.svg", "/brand-light.svg"):
             with self.subTest(path=path):
                 status, headers, body = self.request(path=path)
                 self.assertEqual(status, 200)
                 self.assertTrue(body)
                 self.assertIn("frame-ancestors 'none'", headers["Content-Security-Policy"])
                 self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
+
+    def test_optional_mail_uses_authenticated_and_csrf_checked_http_boundary(self):
+        cookie, csrf, _ = self.login()
+        status, _, body = self.request('POST', '/api', {'method': 'mail.list', 'data': {}}, {'Cookie': cookie, 'X-CSRF-Token': csrf})
+        self.assertEqual(status, 200)
+        self.assertFalse(json.loads(body)['installed'])
+        self.assertEqual(self.request('POST', '/api', {'method': 'mail.list', 'data': {}})[0], 401)
+        self.assertEqual(self.request('POST', '/api', {'method': 'mail.domain', 'data': {}}, {'Cookie': cookie, 'X-CSRF-Token': 'forged'})[0], 403)
 
     def test_dns_edits_and_new_operations_use_the_authenticated_http_boundary(self):
         cookie,csrf,_=self.login()
