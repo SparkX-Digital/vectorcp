@@ -130,3 +130,41 @@ transport, mail, hardware power-cut recovery or full-machine disaster recovery.
 The source upgrade helper takes the same maintenance lock and refuses a pending
 DNS checkpoint before swapping application files. Its check-only mode remains
 read-only.
+
+## Optional mail profile
+
+After upgrading the marked disposable guest, prepare a root-owned private test
+certificate covering `mail.example.test` and its root-only key under
+`/root/vectorcp-mail-test-tls/`. Install the optional profile with loopback
+listeners, then run (from the extracted source):
+
+```sh
+sudo bash deploy/mail-install.sh --hostname mail.example.test \
+  --cert /root/vectorcp-mail-test-tls/cert.pem \
+  --key /root/vectorcp-mail-test-tls/key.pem --storage-mb 512 --apply
+sudo env PYTHONPATH=/opt/vectorcp python3 tests/acceptance_mail_linux.py --apply
+```
+
+The harness creates two additional isolated customers and three synthetic
+mailboxes. Its private resume fixture and safe result are under
+`/var/lib/vectorcp/mail-acceptance/`. Eight native groups cover TLS, relay/sender
+denials, queue/LMTP/IMAP delivery, cross-mailbox and website-UID denials, quota
+enforcement, revocation and persisted-checkpoint recovery with retained messages.
+SELinux remains enforcing. It sends no external messages and changes no DNS.
+This is loopback/private-certificate evidence, not WAN delivery or full mail DR.
+See [MAIL_HOSTING.md](MAIL_HOSTING.md) for boundaries and installation recovery.
+
+For the mail reboot fence, complete delivery acceptance first, then run:
+
+```sh
+sudo env PYTHONPATH=/opt/vectorcp python3 tests/acceptance_mail_boot_linux.py --apply --prepare
+# Restart ONLY this disposable guest; leave the private checkpoint intact.
+sudo env PYTHONPATH=/opt/vectorcp python3 tests/acceptance_mail_boot_linux.py --apply --verify
+```
+
+The separate boot result records four checks. The reviewed run deliberately
+terminated/restarted the VM process, verified unchanged startup-gate hashes,
+blocked automatic and explicit native startup while pending, preserved real
+messages and committed records, then recovered through the owner API. Native
+SMTP/IMAP acceptance passed again after recovery. This is a virtual-machine
+process crash, not a physical host power-loss test.

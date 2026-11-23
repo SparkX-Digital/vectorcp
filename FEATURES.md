@@ -7,8 +7,9 @@ authorization checks, recovery behavior and reproducible acceptance evidence.
 
 The [product specification](PRODUCT.md) defines the roles, installation contract
 and release gates. The [capability catalog](CAPABILITIES.md) breaks the full
-scope into customer, reseller and administrator workflows. Updated 22 November
-2026 with Unreleased portable account transfers, database/recovery and optional public authoritative DNS workflows. Demo
+scope into customer, reseller and administrator workflows. Updated 23 November
+2026 with optional mailbox/SMTP/IMAP hosting, portable account transfers,
+database/recovery and optional public authoritative DNS workflows. Demo
 screens reveal controls, but cannot establish undocumented behavior or prove
 that an action works on a real server.
 
@@ -64,7 +65,7 @@ evidence. Features can move between milestones when dependencies require it.
 | PostgreSQL | Planned; not implemented. | Per-account databases and users with administration sign-on | Role isolation; ownership and recovery tests |
 | MongoDB | Planned; not implemented. | Per-account database controls | Authentication and tenant boundaries; dump/restore tests |
 | Shared DB allowance | Planned; not implemented. | A plan's combined database count across engines | Cannot multiply the allowance by choosing different engines |
-| Mail service | Planned; not implemented. | Postfix, Dovecot, mailbox and domain management | External SMTP/IMAP tests; routing and account ownership |
+| Mail service | Partial: optional owner-installed SMTP/IMAPS, scoped mailboxes/quotas, local-domain approval and durable access recovery. Public delivery, aliases and mail backup pending; see [MAIL_HOSTING.md](MAIL_HOSTING.md). | Postfix, Dovecot, mailbox and domain management | External SMTP/IMAP tests; routing and account ownership |
 | Mail filtering | Planned; not implemented. | Rspamd, DKIM and optional ClamAV | Spam/virus test fixtures; clean mail still delivered |
 | Mail applications | Planned; not implemented. | Roundcube and customer panel sign-on | TLS and scoped sign-on; no open relay |
 | Mail rules | Planned; not implemented. | Forwarding, automatic replies and filtering | Loop prevention, permission checks and mailbox-specific behavior |

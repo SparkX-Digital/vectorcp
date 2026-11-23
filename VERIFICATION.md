@@ -1,3 +1,43 @@
+# Unreleased 0.4.3 optional mail hosting
+
+Verified 23 November 2026. The development catalog records **253 workflows:
+53 Available, 30 Partial and 170 Planned**. Mailbox/quota and local routing
+capabilities are partial; aliases, webmail, filtering, signing and mail backup
+remain open. Published 0.4.2 artifacts are unchanged.
+
+- **220 Python unit/HTTP checks**, including **14 mailbox and 4 profile checks**, cover scoped
+  access, CSRF, owner approval, reservations, secret handling, inherited access,
+  publication interruption, damaged lookup recovery and stopped-profile gating.
+  All 18 mail/profile checks also pass on native Python 3.9.
+- Eight [native mail acceptance groups](tests/acceptance_mail_linux.py) pass on
+  AlmaLinux 9.8 with Postfix 3.5.25, Dovecot 2.3.16 and SELinux enforcing. Two
+  newly isolated QA customers and three mailboxes exercise verified IMAPS and
+  STARTTLS submission, disabled plaintext/unused listeners, anonymous relay and
+  sender denials, real queue/LMTP/IMAP delivery, cross-customer password/path and
+  website-UID denials, native quota enforcement and immediate session revocation.
+- A persisted checkpoint blocks service startup across an agent restart. Explicit
+  owner recovery restores committed lookup data and retained mailbox messages.
+  A separate four-part boot check also passes after deliberate termination and
+  restart of the disposable QEMU process: startup-gate hashes persist, the
+  checkpoint blocks automatic and explicit startup, committed mail records and
+  nonempty message contents survive, and owner recovery restores healthy services.
+  This is a VM process-crash test, not a physical host power-cut test.
+- Mailbox and queue volumes are actually mounted and bounded. Native readers use
+  a separate mail-only lookup with cost-12 bcrypt hashes. Customer website UIDs
+  and the mail service user are denied access to the relevant private stores.
+- Browser layout fits widths 320, 390, 463, 768, 1280 and 1920 without page
+  overflow. Controls measure 44 px on mobile and 40 px on desktop; creation
+  dialogs fit 320/390/1280 widths. No real mailbox credentials are entered into
+  browser test forms.
+
+All mail traffic in these checks stays on loopback with a private test
+certificate. No public MX changes or Internet messages are part of acceptance.
+WAN delivery, independent clients, signing/reputation, filtering, mail-specific
+backup/restore, sustained load and independent security review remain unverified.
+See [MAIL_HOSTING.md](MAIL_HOSTING.md) for installation and recovery limits.
+
+---
+
 # Unreleased 0.4.3 portable account transfers
 
 Verified 22 November 2026. The development catalog records **253 workflows:

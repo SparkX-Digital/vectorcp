@@ -1,6 +1,6 @@
 # VectorCP capability catalog
 
-Updated 22 November 2026. This catalog defines the intended scope for a free,
+Updated 23 November 2026. This catalog defines the intended scope for a free,
 self-hosted hosting panel. It consolidates customer tools, reseller operations
 and server administration into original product requirements. It is not a
 claim that every tool is implemented.
@@ -28,8 +28,13 @@ DNSSEC and independent nameserver recovery remain open.
 
 Unreleased [portable account transfers](ACCOUNT_TRANSFERS.md) include bounded
 multi-site files and primary SQL, empty-target inspection, suspended imports and
-creation-journal recovery. Other archive formats, remote transports, mail and
+creation-journal recovery. Other archive formats, remote transports, mail transfer and
 full-machine recovery remain open.
+
+The optional [mail profile](MAIL_HOSTING.md) implements owner-approved local
+domains, scoped mailboxes, SMTP/IMAPS, quotas and access-publication recovery.
+Aliases, webmail, broader routing, filtering, signing and mail backup remain open;
+loopback native acceptance does not establish Internet delivery.
 
 Stable IDs identify work items and acceptance evidence. A row is a user workflow,
 not necessarily a screen or a single development task. Read [PRODUCT.md](PRODUCT.md)
@@ -226,10 +231,10 @@ preference, suspension precedence, failure recovery and acceptance scope.
 
 | ID | Capability | Status |
 | --- | --- | --- |
-| VCP-0901 | Mailboxes, aliases and per-mailbox quotas | Planned |
+| VCP-0901 | Mailboxes, aliases and per-mailbox quotas | Partial |
 | VCP-0902 | Webmail and client auto-configuration | Planned |
 | VCP-0903 | Forwarders and domain-level forwarding | Planned |
-| VCP-0904 | Local, remote and backup mail routing | Planned |
+| VCP-0904 | Local, remote and backup mail routing | Partial |
 | VCP-0905 | Automatic replies with date windows | Planned |
 | VCP-0906 | Default/catch-all address handling | Planned |
 | VCP-0907 | Mailbox and domain filtering rules | Planned |

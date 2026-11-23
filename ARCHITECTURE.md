@@ -57,7 +57,7 @@ limits are not yet implemented.
 
 ## Services and changes
 
-Use maintained Linux engines for HTTP, PHP, databases, DNS and future mail.
+Use maintained Linux engines for HTTP, PHP, databases, DNS and mail.
 Generate configuration from typed values, validate before reload, retain the
 previous configuration on failure, and confirm observed service state. Never
 turn a dashboard button into an unrestricted root command dispatcher.
@@ -71,3 +71,20 @@ clustering and external synchronization remain planned.
 
 A service is available only after its backend is installed and exercised.
 Unimplemented features belong in the roadmap, not as pretend success actions.
+
+## Optional virtual mail profile
+
+`mail.py` scopes owner-approved domains and virtual mailboxes. A dedicated
+lookup projection gives native Postfix/Dovecot only mail addresses, password
+hashes, immutable homes, quotas and effective permissions. It contains no panel
+credentials or sessions. A root-only pre-commit checkpoint stops both services
+before access changes commit; committed projection publication and startup
+follow. Interrupted publication stays stopped for explicit owner recovery.
+
+A fixed non-login mail UID owns a bounded mailbox volume. A second bounded
+volume holds the queue; native unit dependencies require both mounts. Tenant
+separation uses native authentication and mailbox namespaces, while website
+UIDs have no access. This is a shared mail service, not a per-mailbox kernel
+sandbox. The optional root-only installer refuses existing mail service/data
+and verifies real TLS listeners and relay denial before reporting success.
+See [MAIL_HOSTING.md](MAIL_HOSTING.md) for limits and unimplemented services.

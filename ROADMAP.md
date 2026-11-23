@@ -43,7 +43,10 @@ clear delegation and network configuration. The Unreleased optional public BIND
 profile adds explicit activation and diagnostics; independent delegation,
 multi-nameserver availability and DNSSEC remain open. Managed DNS snapshots and
 interrupted-change recovery are implemented; independent-server recovery remains open.
-Current package flags do not provide a working mail service.
+The optional Unreleased [mail profile](MAIL_HOSTING.md) provides owner-approved
+local domains, scoped mailboxes, SMTP/IMAPS, quotas and access-publication
+recovery. Aliases, webmail, filtering, signing, mail backup and Internet
+deliverability remain open. Package flags alone do not install or activate it.
 
 Complete when external mail delivery and public DNS behavior are independently
 verified, tenant boundaries hold and backup/restore includes these services.

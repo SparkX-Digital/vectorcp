@@ -12,6 +12,11 @@ unchanged; a 0.4.3 release archive has not yet been published.
 
 ### Added
 
+- An optional owner-installed native mail profile: scoped mailbox/password/quota
+  management, mail-domain approval, SMTP/IMAPS with TLS, sender/relay denials,
+  bounded mailbox/queue volumes and durable access-publication recovery. Existing
+  external routing is unchanged. Aliases, webmail, filtering, signing, mail backup
+  and public delivery acceptance remain open. See [MAIL_HOSTING.md](MAIL_HOSTING.md).
 - Portable account v1 export, resumable checksummed upload, destination
   inspection and import into an existing empty isolation allocation. Primary
   SQL imports use fresh scoped credentials; managed WordPress connection lines
