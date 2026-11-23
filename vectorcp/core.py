@@ -189,6 +189,10 @@ class Engine:
         with self.db() as db:
             migrate_transfers(db)
         self.transfers = Transfers(self)
+        from .mail import Mail, migrate as migrate_mail
+        with self.db() as db:
+            migrate_mail(db)
+        self.mail = Mail(self)
         os.chmod(self.db_path, 0o600)
 
     @contextlib.contextmanager
@@ -197,8 +201,13 @@ class Engine:
         db.row_factory = sqlite3.Row
         db.execute("PRAGMA foreign_keys=ON")
         try:
+            mail = getattr(self, 'mail', None)
+            before = mail.snapshot(db) if mail and mail.profile else None
             yield db
+            publication = mail.prepare(db, before) if mail else None
             db.commit()
+            if publication is not None:
+                self.mail.complete(publication)
         except Exception:
             db.rollback()
             raise
@@ -312,6 +321,7 @@ class Engine:
         from .offsite import OPERATIONS as offsite_operations, READ_ONLY as offsite_reads
         from .dns import OPERATIONS as dns_operations, READ_ONLY as dns_reads
         from .transfers import OPERATIONS as transfer_operations, READ_ONLY as transfer_reads
+        from .mail import OPERATIONS as mail_operations, READ_ONLY as mail_reads
         allowed = {"overview", "accounts.list", "accounts.create", "accounts.active", "sites.list", "sites.create", "sites.active",
                    "files.list", "files.read", "files.write", "files.mkdir", "backups.list", "backups.create", "backups.download", "audit", "logout", "hosting.enable", "hosting.php", "hosting.wordpress", "hosting.tls", "databases.create", "databases.list", "databases.credentials", "jobs.list", "backups.full", "backups.restore", "backups.delete", "backups.describe", "backups.chunk", "plans.list", "plans.create", "plans.active", "plans.assign", "dns.list", "dns.create", "dns.save", "dns.delete", "dns.export", "dns.verify"}
         allowed |= file_operations | security_operations | routing_operations | {'accounts.inspect', 'accounts.update', 'accounts.bulk'}
@@ -319,6 +329,7 @@ class Engine:
         allowed |= offsite_operations
         allowed |= dns_operations
         allowed |= transfer_operations
+        allowed |= mail_operations
         if method not in allowed:
             raise Fault("Unknown operation.", 404)
         read_only = method in {"overview", "accounts.list", "sites.list", "files.list", "files.read", "backups.list", "backups.download", "audit", "jobs.list", "databases.list", "databases.credentials", "backups.describe", "backups.chunk", "plans.list", "dns.list", "dns.export"}
@@ -327,6 +338,7 @@ class Engine:
         read_only = read_only or method in offsite_reads
         read_only = read_only or method in dns_reads
         read_only = read_only or method in transfer_reads
+        read_only = read_only or method in mail_reads
         with self.lock, self.db() as db:
             actor = self.authenticate(db, request.get("token"))
             if actor['password_change_required'] and method not in {'overview', 'security.status', 'security.password', 'logout'}:
@@ -336,6 +348,8 @@ class Engine:
                 if not isinstance(csrf, str) or not hmac.compare_digest(csrf, actor["csrf"]):
                     raise Fault("Request verification failed. Refresh and try again.", 403)
             from .distribution import scope, manages
+            if method in mail_operations:
+                return self.mail.dispatch(db, actor, method, data)
             if method in transfer_operations:
                 return self.transfers.dispatch(db, actor, method, data)
             if method in offsite_operations:
@@ -971,7 +985,7 @@ class Engine:
         uptime = float(Path("/proc/uptime").read_text().split()[0]) if Path("/proc/uptime").exists() else None
         services = []
         if not self.development:
-            for name in ("nginx", "vectorcp-agent", "vectorcp-web", "sshd"):
+            for name in ("nginx", "vectorcp-agent", "vectorcp-web", "sshd") + (("postfix", "dovecot") if self.mail.profile else ()):
                 r = subprocess.run(["/usr/bin/systemctl", "is-active", name], capture_output=True, text=True, timeout=5, check=False)
                 services.append({"name": name, "status": r.stdout.strip() or "unknown"})
         return {"public_ipv4": self.public_ipv4, "hosting_enabled": self.hosting.enabled, "user": self.public_user(actor), "csrf": actor["csrf"], "version": VERSION,
@@ -980,5 +994,5 @@ class Engine:
                 "counts": {"sites": count, "active": active, "accounts": db.execute("SELECT COUNT(*) FROM users WHERE role='customer' AND is_reseller=0" + (" AND parent_id=?" if actor['role']=='reseller' else ''), (actor['id'],) if actor['role']=='reseller' else ()).fetchone()[0] if actor['role'] in ('admin','reseller') else None},
                 "features": self.distribution.features(db, actor), "reseller_pool": self.distribution.usage(db, actor) if actor["role"] == "reseller" else None,
                 "services": services, "usage_bytes": self.account_usage(db, actor["id"]),
-                "capabilities": (["Isolated customer storage and processes", "PHP 8.3", "Private MariaDB databases, scoped users and table browser", "WordPress installer", "Customer domain HTTPS", "SQL import/export and local files/database recovery", "UTC backup schedules and verified SFTP copies", "Portable account transfers into empty isolated customers"] if self.hosting.enabled else []) + ["Website redirects, HTTPS preference and static error pages", "Active-session inventory and remote revocation", "Authenticator app and single-use recovery codes", "Password policy, resets and forced rotation", "Contact editing and scoped account search", "Selected-account access and plan changes", "Folder copy, batch actions and recoverable trash", "Hidden-file controls and permission editing", "Bounded ZIP creation and safe extraction", "DNS zone editor, export and private authoritative preview", "Public TXT domain ownership checks", "Reseller accounts and delegated customers", "Hosting plans and reserved allowances", "Owner locks and scoped reseller access", "Sign-in and account ownership", "Customer panel accounts", "Static websites", "Text file editor", "Site suspension", "File storage allowances", "Site export downloads", "Audit history"],
-                "planned": ["Public mail service", "Public DNS delegation", "Nested resellers and white-label branding", "Shell and application runtimes", "Encrypted incremental and full-machine recovery", "Billing and AI integrations"]}
+                "capabilities": (["Isolated customer storage and processes", "PHP 8.3", "Private MariaDB databases, scoped users and table browser", "WordPress installer", "Customer domain HTTPS", "SQL import/export and local files/database recovery", "UTC backup schedules and verified SFTP copies", "Portable account transfers into empty isolated customers"] if self.hosting.enabled else []) + ["Optional owner-installed mailboxes, SMTP/IMAPS and quotas", "Website redirects, HTTPS preference and static error pages", "Active-session inventory and remote revocation", "Authenticator app and single-use recovery codes", "Password policy, resets and forced rotation", "Contact editing and scoped account search", "Selected-account access and plan changes", "Folder copy, batch actions and recoverable trash", "Hidden-file controls and permission editing", "Bounded ZIP creation and safe extraction", "DNS zone editor, export and private authoritative preview", "Public TXT domain ownership checks", "Reseller accounts and delegated customers", "Hosting plans and reserved allowances", "Owner locks and scoped reseller access", "Sign-in and account ownership", "Customer panel accounts", "Static websites", "Text file editor", "Site suspension", "File storage allowances", "Site export downloads", "Audit history"],
+                "planned": ["Webmail, mail filtering, signing, backup and Internet delivery acceptance", "Public DNS delegation", "Nested resellers and white-label branding", "Shell and application runtimes", "Encrypted incremental and full-machine recovery", "Billing and AI integrations"]}
