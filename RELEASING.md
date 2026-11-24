@@ -5,10 +5,18 @@ history. A documentation update or planned feature is not a release by itself.
 
 ## During development
 
-Add user-visible changes under **Unreleased** in `CHANGELOG.md`, grouped as
+Keep future work in the roadmap. Record verified user-visible changes in a
+version-and-date entry in `CHANGELOG.md`, grouped as
 Added, Changed, Fixed, Security, Deprecated or Removed when useful. Describe the
 resulting behavior and installation implications. Track future work in the
 feature catalog and roadmap rather than as a shipped addition.
+
+Use `## <version> — <day Month year> · Development snapshot` for a published
+development snapshot and the actual publication date. If several earlier builds
+shared an unreleased source version, use a snapshot identifier such as
+`0.4.3-dev.20261123`, with the verified merge date. This records history without
+creating retroactive tags or claiming a stable release. Preserve previous dates,
+archive bytes and checksums. Leave **Unreleased** for changes not yet published.
 
 ## Prepare a version
 

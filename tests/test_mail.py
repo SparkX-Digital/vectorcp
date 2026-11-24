@@ -212,5 +212,97 @@ class MailTests(unittest.TestCase):
         self.assertEqual(self.e.mail.projection.stat().st_mode & 0o777, 0o640)
 
 
+    def alias_profile(self):
+        self.install()
+        path = self.e.mail.config / 'installed.json'
+        data = json.loads(path.read_text()); data['aliases'] = True
+        path.write_text(json.dumps(data))
+        self.enable()
+
+    def alias(self, mailbox, local='support', who=None, site=None):
+        self.call(who or self.alice, 'mail.alias-create', {'site_id': site or self.site, 'local': local, 'mailbox_id': mailbox})
+        domains = self.call(who or self.alice, 'mail.list')['domains']
+        return next(a for d in domains for a in d['aliases'] if a['local'] == local)
+
+    def test_legacy_profile_keeps_digest_and_refuses_aliases_until_upgrade(self):
+        self.install(); self.enable(); ident = self.create()
+        before = self.e.mail.current_digest()
+        with self.assertRaises(Fault):
+            self.alias(ident)
+        self.assertEqual(self.e.mail.current_digest(), before)
+        self.assertFalse(self.call(self.alice, 'mail.list')['aliases_supported'])
+        self.assertFalse(self.call(self.alice, 'mail.list')['recovery_required'])
+
+    def test_alias_projection_has_no_password_or_additional_storage(self):
+        self.alias_profile(); ident = self.create()
+        original = self.projection()
+        alias = self.alias(ident)
+        self.assertTrue(alias['effective'])
+        self.assertEqual(alias['destination'], 'hello@alice.example.test')
+        self.assertNotIn('password', alias)
+        self.assertEqual(original, self.projection())
+        with sqlite3.connect(self.e.mail.projection) as db:
+            self.assertEqual(db.execute('SELECT * FROM aliases').fetchall(), [('support@alice.example.test', 'hello@alice.example.test', 1)])
+
+    def test_aliases_are_scoped_and_cannot_chain_or_forward_externally(self):
+        self.alias_profile(); self.enable(self.other)
+        first = self.create(); second = self.create(self.bob, self.other)
+        alias = self.alias(first)
+        for site, target in [(self.site, second), (self.other, second), (self.site, alias['id']), (self.site, 'outside@example.net')]:
+            with self.subTest(site=site, target=target), self.assertRaises(Fault) as caught:
+                self.alias(target, local='denied', site=site)
+            self.assertEqual(caught.exception.status, 404)
+        with self.assertRaises(Fault) as caught:
+            self.call(self.bob, 'mail.alias-active', {'id': alias['id'], 'active': False})
+        self.assertEqual(caught.exception.status, 404)
+        self.assertEqual(self.call(self.bob, 'mail.list')['domains'][0]['aliases'], [])
+
+    def test_alias_collision_reserved_suspended_names_and_validation(self):
+        self.alias_profile(); ident = self.create(); alias = self.alias(ident)
+        self.call(self.alice, 'mail.alias-active', {'id': alias['id'], 'active': False})
+        for local in ('hello', 'support', '*', '../bad', 'a+b', 'UPPER', 'a..b', 'a' * 65):
+            with self.subTest(local=local), self.assertRaises(Fault):
+                self.alias(ident, local=local)
+        with self.assertRaises(Fault):
+            self.create(local='support')
+        with self.assertRaises(Fault):
+            self.call(self.alice, 'mail.alias-active', {'id': alias['id'], 'active': 'false'})
+        for method in ('mail.alias-create', 'mail.alias-active'):
+            with self.assertRaises(Fault) as caught:
+                self.call(self.alice, method, {}, csrf='forged')
+            self.assertEqual(caught.exception.status, 403)
+
+    def test_alias_revocation_follows_destination_domain_and_account(self):
+        self.alias_profile(); ident = self.create(); alias = self.alias(ident)
+        def active():
+            with sqlite3.connect(self.e.mail.projection) as db:
+                return db.execute('SELECT active FROM aliases').fetchone()[0]
+        for method, off, on in [
+                ('mail.active', {'id': ident, 'active': False}, {'id': ident, 'active': True}),
+                ('mail.alias-active', {'id': alias['id'], 'active': False}, {'id': alias['id'], 'active': True}),
+                ('mail.domain', {'site_id': self.site, 'enabled': False, 'confirm_domain': 'alice.example.test'}, {'site_id': self.site, 'enabled': True, 'confirm_domain': 'alice.example.test'}),
+                ('accounts.active', {'id': self.uid, 'active': False}, {'id': self.uid, 'active': True})]:
+            self.call(self.owner, method, off); self.assertEqual(active(), 0)
+            self.call(self.owner, method, on); self.assertEqual(active(), 1)
+
+    def test_alias_publication_interruption_recovers_committed_destination(self):
+        self.alias_profile(); ident = self.create()
+        with patch.object(self.e.mail, 'complete', side_effect=Fault('simulated publication failure', 503)):
+            with self.assertRaises(Fault):
+                self.alias(ident)
+        self.e = Engine(self.root / 'state', self.root / 'sites', development=True)
+        self.assertTrue(self.call(self.alice, 'mail.list')['recovery_required'])
+        self.call(self.owner, 'mail.recover', {'confirm': 'RECOVER MAIL'})
+        self.assertEqual(self.call(self.alice, 'mail.list')['domains'][0]['aliases'][0]['destination'], 'hello@alice.example.test')
+
+    def test_alias_customer_limit_counts_suspended_addresses(self):
+        self.alias_profile(); ident = self.create()
+        with self.e.db() as db:
+            db.executemany('INSERT INTO mail_aliases VALUES(?,?,?,?,?,?)', [('limit%027d' % i, self.site, 'reserved%d' % i, ident, 0, 1) for i in range(64)])
+        with self.assertRaises(Fault) as caught:
+            self.alias(ident)
+        self.assertEqual(caught.exception.status, 409)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -256,7 +256,7 @@ def main():
     assert subprocess.run(['runuser', '-u', 'postfix', '--', 'test', '-r', '/var/lib/vectorcp/control.sqlite3'], capture_output=True).returncode != 0
     assert Path('/var/lib/vectorcp-mail/lookup.sqlite3').stat().st_mode & 0o777 == 0o640
     with sqlite3.connect('/var/lib/vectorcp-mail/lookup.sqlite3') as db:
-        assert {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")} == {'domains', 'boxes', 'metadata'}
+        assert {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")} == {'domains', 'boxes', 'metadata', 'aliases'}
         assert all(r[0].startswith('{BLF-CRYPT}$2') for r in db.execute('SELECT password FROM boxes'))
     for unit in ('postfix', 'dovecot', 'vectorcp-agent', 'vectorcp-web', 'vectorcp-dns'):
         assert run(['systemctl', 'is-active', unit]).strip() == 'active'

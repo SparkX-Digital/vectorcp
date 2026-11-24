@@ -97,8 +97,12 @@ WantedBy=multi-user.target
             os.chmod(destination, st.st_mode & 0o7777)
 
 
-def postfix_config(hostname, listen):
-    return '''# Managed by the optional VectorCP mail profile.
+ALIAS_QUERY = "SELECT destination FROM aliases WHERE address='%s' AND active=1"
+ALIAS_MAP = 'dbpath = /var/lib/vectorcp-mail/lookup.sqlite3\nquery = ' + ALIAS_QUERY + '\n'
+
+
+def postfix_config(hostname, listen, aliases=True):
+    value = '''# Managed by the optional VectorCP mail profile.
 compatibility_level = 2
 myhostname = %s
 myorigin = $myhostname
@@ -147,6 +151,9 @@ smtpd_sender_login_maps = sqlite:/etc/postfix/vectorcp-senders.cf
 smtpd_data_restrictions = reject_unauth_pipelining
 smtpd_delay_reject = yes
 ''' % (hostname, ', '.join(listen))
+    if aliases:
+        value = value.replace('virtual_alias_maps =\n', 'virtual_alias_maps = sqlite:/etc/postfix/vectorcp-aliases.cf\n')
+    return value
 
 
 def dovecot_config(listen, uid, gid):
@@ -397,6 +404,7 @@ def install(args):
             'senders': "SELECT address FROM boxes WHERE address='%s' AND active=1",
         }.items():
             write(Path('/etc/postfix/vectorcp-' + name + '.cf'), 'dbpath = /var/lib/vectorcp-mail/lookup.sqlite3\nquery = ' + query + '\n', 0o644)
+        write(Path('/etc/postfix/vectorcp-aliases.cf'), ALIAS_MAP, 0o644)
         write(Path('/etc/dovecot/dovecot.conf'), dovecot_config(listen, vmail.pw_uid, vmail.pw_gid), 0o644)
         sql = '''driver = sqlite
 connect = /var/lib/vectorcp-mail/lookup.sqlite3
@@ -430,7 +438,7 @@ ReadWritePaths=/var/lib/vectorcp-mail
 ''', 0o644)
         run(['/usr/bin/doveconf', '-n'])
         run(['/usr/sbin/postfix', 'check'])
-        write(CONFIG / 'installed.json', json.dumps({'version': 1, 'hostname': args.hostname,
+        write(CONFIG / 'installed.json', json.dumps({'version': 1, 'aliases': True, 'hostname': args.hostname,
               'listen': listen, 'storage_mb': args.storage_mb, 'control_db': str(STATE / 'control.sqlite3'),
               'backup': str(backup)}) + '\n', 0o600)
         run(['/usr/bin/systemctl', 'daemon-reload'])

@@ -1,22 +1,52 @@
 # Changelog
 
-User-visible changes are recorded here. Future work belongs in **Unreleased**;
-planned capabilities are tracked in [FEATURES.md](FEATURES.md) and
+Verified user-visible changes are recorded with a version and date. Future work is
+tracked in [FEATURES.md](FEATURES.md) and
 [CAPABILITIES.md](CAPABILITIES.md). See [RELEASING.md](RELEASING.md) for tags,
 checksums, versioning and publication rules.
 
 ## Unreleased
 
-The current development-source version is 0.4.3. Published 0.4.2 archives remain
-unchanged; a 0.4.3 release archive has not yet been published.
+Future changes will be recorded here after implementation and verification.
+Planned capabilities remain in the roadmap.
+
+## 0.4.4 — 24 November 2026 · Development snapshot
 
 ### Added
+
+- Scoped, same-domain mail aliases delivering to one existing mailbox. Aliases
+  have no login, password or extra storage. Creation and suspension share the
+  mailbox publication checkpoint, ownership rules and destination access state.
+- An explicit check-first native alias-profile upgrade for existing installations.
+  It preserves mailbox credentials/messages, refuses customized configuration,
+  retains private backups and leaves interrupted upgrades stopped for inspection.
+
+### Changed
+
+- Versioned, dated development history and a public changelog page. Earlier
+  development entries use snapshot identifiers and actual merge dates; they are
+  not retroactive stable releases or Git tags.
+- Improved website documentation navigation, search, mobile layout and download
+  guidance. Each change is verified before publication.
+
+### Limits
+
+- This is a development snapshot, not a stable production release. Aliases are
+  receive-only and stay on their destination mailbox's domain. Catch-all aliases,
+  chains, external forwarding, webmail, filtering, signing and mail backup remain
+  separate work. No existing mail service, DNS or firewall is changed by an
+  ordinary application upgrade.
+
+## 0.4.3-dev.20261123 — 23 November 2026 · Mail hosting
 
 - An optional owner-installed native mail profile: scoped mailbox/password/quota
   management, mail-domain approval, SMTP/IMAPS with TLS, sender/relay denials,
   bounded mailbox/queue volumes and durable access-publication recovery. Existing
-  external routing is unchanged. Aliases, webmail, filtering, signing, mail backup
+  external routing is unchanged. At this snapshot, aliases, webmail, filtering, signing, mail backup
   and public delivery acceptance remain open. See [MAIL_HOSTING.md](MAIL_HOSTING.md).
+
+## 0.4.3-dev.20261122 — 22 November 2026 · Account transfers
+
 - Portable account v1 export, resumable checksummed upload, destination
   inspection and import into an existing empty isolation allocation. Primary
   SQL imports use fresh scoped credentials; managed WordPress connection lines
@@ -24,6 +54,9 @@ unchanged; a 0.4.3 release archive has not yet been published.
   schedules are paused. Durable allocation journals support failure rollback and
   explicit owner recovery after interruption. See
   [ACCOUNT_TRANSFERS.md](ACCOUNT_TRANSFERS.md) for limits and excluded services.
+
+## 0.4.3-dev.20261120 — 20 November 2026 · DNS recovery and retention
+
 - Monthly UTC backup schedules with day-of-month selection, month-end clamping
   and existing scoped retention. Daily and weekly schedules remain compatible.
 - DNS record snapshot/import/export/restore, inactive-zone removal with a recovery
@@ -32,6 +65,8 @@ unchanged; a 0.4.3 release archive has not yet been published.
   damaged managed zones, retains original/unreferenced files privately and checks
   UDP/TCP readiness. Upgrades and profile changes refuse pending DNS recovery.
   See [DNS_RECOVERY.md](DNS_RECOVERY.md) for bounds and recovery limits.
+
+## 0.4.3-dev.20261119.2 — 19 November 2026 · Public DNS
 
 - An optional owner-installed public authoritative BIND profile with explicit
   interfaces, UDP/TCP readiness checks, private recovery copies and profile
@@ -43,6 +78,8 @@ unchanged; a 0.4.3 release archive has not yet been published.
   supplied DNS/hosting profile helpers. The private installer refuses to overwrite
   a public profile; public profile changes refuse active zones.
 
+## 0.4.3-dev.20261119.1 — 19 November 2026 · Databases and backup scheduling
+
 - Scoped additional MariaDB users and individual database grants, password
   rotation/removal, read-only table browsing, size reports and bounded SQL
   import/export with failure rollback. See [DATABASE_ADMIN.md](DATABASE_ADMIN.md).
@@ -53,6 +90,8 @@ unchanged; a 0.4.3 release archive has not yet been published.
 - Reset the PHP start counter after intentional maintenance pauses so repeated
   backup/import jobs can resume PHP without exhausting the crash-loop limit.
 
+## 0.4.3-dev.20261118 — 18 November 2026 · Website routing
+
 - Website redirect rules with exact/folder matching, permanent/temporary status,
   query preservation and remaining-path options; an HTTPS preference that keeps
   the certificate installed; and static HTML error pages for selected statuses.
@@ -62,9 +101,13 @@ unchanged; a 0.4.3 release archive has not yet been published.
 - Opt-in real Nginx routing acceptance checks on separate loopback listeners in
   an already marked disposable Linux guest.
 
+## 0.4.3-dev.20261105.2 — 5 November 2026 · Selected website access
+
 - Selected-website suspension and activation, bounded to 20 domains, with
   per-domain results, filter-aware selections, owner-hold enforcement and
   stopping without retries after uncertain responses.
+
+## 0.4.3-dev.20261105.1 — 5 November 2026 · Accounts, security and files
 
 - Own-device session inventory, individual/current/all-other revocation, bounded
   active sessions and migration of existing sessions without changing the
@@ -102,7 +145,7 @@ unchanged; a 0.4.3 release archive has not yet been published.
 
 ### Limits
 
-- This section describes current source, not the immutable 0.4.2 download.
+- These dated 0.4.3 entries describe development source, not the immutable 0.4.2 download.
 - Authenticator secrets rely on root-only database/state permissions and are not
   encrypted at rest. Email recovery/notifications and passkeys remain unfinished.
 - Folder/archive/trash operations have explicit bounds; file batches report

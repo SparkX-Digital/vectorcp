@@ -19,7 +19,8 @@ from .core import Fault, integer, password_hash
 from .distribution import available, manages, scope
 
 OPERATIONS = {'mail.list', 'mail.domain', 'mail.create', 'mail.password',
-              'mail.quota', 'mail.active', 'mail.recover'}
+              'mail.quota', 'mail.active', 'mail.recover', 'mail.alias-create',
+              'mail.alias-active'}
 READ_ONLY = {'mail.list'}
 LOCAL = re.compile(r'[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?\Z')
 
@@ -32,6 +33,11 @@ def migrate(db):
     CREATE TABLE IF NOT EXISTS mailboxes (
       id TEXT PRIMARY KEY, site_id INTEGER NOT NULL REFERENCES mail_domains(site_id),
       local TEXT NOT NULL, password TEXT NOT NULL, quota_mb INTEGER NOT NULL,
+      active INTEGER NOT NULL DEFAULT 1, created INTEGER NOT NULL,
+      UNIQUE(site_id,local));
+    CREATE TABLE IF NOT EXISTS mail_aliases (
+      id TEXT PRIMARY KEY, site_id INTEGER NOT NULL REFERENCES mail_domains(site_id),
+      local TEXT NOT NULL, mailbox_id TEXT NOT NULL REFERENCES mailboxes(id),
       active INTEGER NOT NULL DEFAULT 1, created INTEGER NOT NULL,
       UNIQUE(site_id,local));
     ''')
@@ -78,7 +84,7 @@ class Mail:
         return r.stdout
 
     def snapshot(self, db):
-        domains, boxes = [], []
+        domains, boxes, aliases = [], [], []
         for site in db.execute('SELECT s.*,m.enabled AS mail_enabled FROM sites s JOIN mail_domains m ON m.site_id=s.id ORDER BY s.id'):
             owner = db.execute('SELECT * FROM users WHERE id=?', (site['user_id'],)).fetchone()
             enabled = bool(site['mail_enabled'] and site['status'] == 'active' and available(db, owner)
@@ -87,7 +93,15 @@ class Mail:
             for box in db.execute('SELECT * FROM mailboxes WHERE site_id=? ORDER BY local', (site['id'],)):
                 boxes.append((box['local'] + '@' + site['domain'], box['password'],
                               str(self.store / box['id']), box['quota_mb'], int(enabled and box['active'])))
-        return {'domains': domains, 'boxes': boxes}
+            for alias in db.execute('SELECT a.*,b.local AS destination,b.active AS mailbox_active FROM mail_aliases a JOIN mailboxes b ON b.id=a.mailbox_id AND b.site_id=a.site_id WHERE a.site_id=? ORDER BY a.local', (site['id'],)):
+                aliases.append((alias['local'] + '@' + site['domain'],
+                                alias['destination'] + '@' + site['domain'],
+                                int(enabled and alias['active'] and alias['mailbox_active'])))
+        result = {'domains': domains, 'boxes': boxes}
+        # Preserve old profile digests until aliases actually exist.
+        if aliases:
+            result['aliases'] = aliases
+        return result
 
     @staticmethod
     def digest(snapshot):
@@ -174,9 +188,11 @@ class Mail:
                 CREATE TABLE domains (domain TEXT PRIMARY KEY, active INTEGER NOT NULL);
                 CREATE TABLE boxes (address TEXT PRIMARY KEY,password TEXT NOT NULL,home TEXT NOT NULL,quota_mb INTEGER NOT NULL,active INTEGER NOT NULL);
                 CREATE TABLE metadata (digest TEXT NOT NULL);
+                CREATE TABLE aliases (address TEXT PRIMARY KEY,destination TEXT NOT NULL,active INTEGER NOT NULL);
                 ''')
                 db.executemany('INSERT INTO domains VALUES(?,?)', snapshot['domains'])
                 db.executemany('INSERT INTO boxes VALUES(?,?,?,?,?)', snapshot['boxes'])
+                db.executemany('INSERT INTO aliases VALUES(?,?,?)', snapshot.get('aliases', []))
                 db.execute('INSERT INTO metadata VALUES(?)', (self.digest(snapshot),))
             temporary.chmod(0o640)
             if not self.e.development:
@@ -246,8 +262,15 @@ class Mail:
                 for b in boxes:
                     b['address'] = b['local'] + '@' + s['domain']
                     b['effective'] = effective and bool(b['active']) and not self.pending.exists()
-                domains.append({'site_id': s['id'], 'domain': s['domain'], 'enabled': bool(s['enabled']), 'effective': effective, 'mailboxes': boxes})
+                aliases = [dict(r) for r in db.execute('SELECT a.id,a.local,a.mailbox_id,a.active,a.created,b.local AS destination,b.active AS mailbox_active FROM mail_aliases a JOIN mailboxes b ON b.id=a.mailbox_id AND b.site_id=a.site_id WHERE a.site_id=? ORDER BY a.local', (s['id'],))]
+                for a in aliases:
+                    a['address'] = a['local'] + '@' + s['domain']
+                    a['destination'] += '@' + s['domain']
+                    mailbox_active = a.pop('mailbox_active')
+                    a['effective'] = effective and bool(a['active'] and mailbox_active)
+                domains.append({'site_id': s['id'], 'domain': s['domain'], 'enabled': bool(s['enabled']), 'effective': effective, 'mailboxes': boxes, 'aliases': aliases})
             return {'installed': bool(p), 'hostname': p['hostname'] if p else None,
+                    'aliases_supported': bool(p and p.get('aliases') is True),
                     **health, 'domains': domains,
                     'storage_mb': p['storage_mb'] * 4 // 5 if p and actor['role'] == 'admin' else None,
                     'ports': {'smtp': 25, 'submission': 587, 'imaps': 993}}
@@ -277,7 +300,7 @@ class Mail:
                 raise Fault('Confirm the exact mail domain and enabled state.')
             db.execute('INSERT INTO mail_domains VALUES(?,?,?) ON CONFLICT(site_id) DO UPDATE SET enabled=excluded.enabled', (site['id'], int(enabled), int(time.time())))
             target = site['domain']
-        elif method == 'mail.create':
+        elif method in ('mail.create', 'mail.alias-create'):
             site, owner = self.site(db, actor, data.get('site_id'), mutation=True)
             domain = db.execute('SELECT enabled FROM mail_domains WHERE site_id=?', (site['id'],)).fetchone()
             if not domain or not domain['enabled']:
@@ -285,8 +308,20 @@ class Mail:
             local = data.get('local')
             if not isinstance(local, str) or not LOCAL.fullmatch(local) or '..' in local:
                 raise Fault('Use 1–64 lowercase letters, digits, dots, underscores or hyphens, starting and ending with a letter or digit.')
-            if db.execute('SELECT 1 FROM mailboxes WHERE site_id=? AND local=?', (site['id'], local)).fetchone():
-                raise Fault('This mailbox already exists.', 409)
+            if (db.execute('SELECT 1 FROM mailboxes WHERE site_id=? AND local=?', (site['id'], local)).fetchone()
+                    or db.execute('SELECT 1 FROM mail_aliases WHERE site_id=? AND local=?', (site['id'], local)).fetchone()):
+                raise Fault('This email address is already reserved by a mailbox or alias.', 409)
+            if method == 'mail.alias-create':
+                self.require_aliases(p)
+                box = db.execute('SELECT id FROM mailboxes WHERE id=? AND site_id=?', (data.get('mailbox_id') if isinstance(data.get('mailbox_id'), str) else '', site['id'])).fetchone()
+                if not box:
+                    raise Fault('Choose a mailbox on this same domain.', 404)
+                if db.execute('SELECT COUNT(*) FROM mail_aliases').fetchone()[0] >= 512 or db.execute('SELECT COUNT(*) FROM mail_aliases a JOIN sites s ON s.id=a.site_id WHERE s.user_id=?', (owner['id'],)).fetchone()[0] >= 64:
+                    raise Fault('This mail profile allows 64 aliases per customer and 512 per server.', 409)
+                db.execute('INSERT INTO mail_aliases VALUES(?,?,?,?,?,?)', (secrets.token_hex(16), site['id'], local, box['id'], 1, int(time.time())))
+                target = local + '@' + site['domain']
+                self.e.log(db, actor, method, target)
+                return {'ok': True}
             if db.execute('SELECT COUNT(*) FROM mailboxes').fetchone()[0] >= 128 or db.execute('SELECT COUNT(*) FROM mailboxes b JOIN sites s ON s.id=b.site_id WHERE s.user_id=?', (owner['id'],)).fetchone()[0] >= 32:
                 raise Fault('This mail profile allows 32 mailboxes per customer and 128 per server.', 409)
             quota = integer(data.get('quota_mb'), 'mailbox quota', 1, 4096)
@@ -294,6 +329,17 @@ class Mail:
             ident = secrets.token_hex(16)
             db.execute('INSERT INTO mailboxes VALUES(?,?,?,?,?,?,?)', (ident, site['id'], local, self.password(data.get('password')), quota, 1, int(time.time())))
             target = local + '@' + site['domain']
+        elif method == 'mail.alias-active':
+            self.require_aliases(p)
+            ident = data.get('id')
+            alias = db.execute('SELECT * FROM mail_aliases WHERE id=?', (ident if isinstance(ident, str) else '',)).fetchone()
+            if not alias:
+                raise Fault('Alias not found.', 404)
+            self.site(db, actor, alias['site_id'], mutation='restrict' if data.get('active') is False else True)
+            if not isinstance(data.get('active'), bool):
+                raise Fault('Choose an enabled or suspended alias state.')
+            db.execute('UPDATE mail_aliases SET active=? WHERE id=?', (int(data['active']), alias['id']))
+            target = alias['local']
         else:
             ident = data.get('id')
             if not isinstance(ident, str) or not re.fullmatch('[a-f0-9]{32}', ident):
@@ -317,3 +363,8 @@ class Mail:
                 raise Fault('Unknown mail operation.', 404)
         self.e.log(db, actor, method, target)
         return {'ok': True}
+
+    @staticmethod
+    def require_aliases(profile):
+        if profile.get('aliases') is not True:
+            raise Fault('The server owner must upgrade the native mail profile for aliases first. See the mail hosting guide.', 409)
