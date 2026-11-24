@@ -1,6 +1,6 @@
 # VectorCP capability catalog
 
-Updated 23 November 2026. This catalog defines the intended scope for a free,
+Updated 24 November 2026. This catalog defines the intended scope for a free,
 self-hosted hosting panel. It consolidates customer tools, reseller operations
 and server administration into original product requirements. It is not a
 claim that every tool is implemented.

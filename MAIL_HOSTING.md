@@ -3,8 +3,9 @@
 VectorCP can provision virtual mailboxes on AlmaLinux 9 x86-64 using the
 distribution's Postfix 3.5 and Dovecot 2.3 packages. This is a limited development
 profile: mailbox creation, password changes, quotas, suspension, local-domain
-delivery, authenticated SMTP submission and IMAPS are implemented. Aliases,
-webmail, forwarding, spam/virus filtering, signing, mail backup and broader
+delivery, authenticated SMTP submission and IMAPS are implemented. Same-domain
+receive-only aliases are also implemented. External forwarding, webmail, spam/virus
+filtering, signing, mail backup and broader
 routing remain planned. Internet delivery and reputation are not accepted.
 
 The profile is optional. An application upgrade adds the controls without
@@ -46,6 +47,46 @@ repositories. Existing customer web/database services are not restarted. Final
 readiness checks verify the certificate and IMAP/STARTTLS listeners, encrypted
 authentication advertisement and anonymous relay rejection before reporting
 success. The private command log is retained with the installation backup.
+
+## Upgrade an existing mail profile for aliases
+
+An ordinary application upgrade preserves native mail configuration. After
+upgrading to source version 0.4.4, the owner can run this on a supported managed
+mail installation:
+
+```sh
+cd /opt/vectorcp
+sudo python3 -m vectorcp.mail_alias_profile
+# After reviewing the check-only result:
+sudo python3 -m vectorcp.mail_alias_profile --apply
+```
+
+The helper requires a healthy managed profile, idle hosting jobs and unchanged
+Postfix configuration. It briefly pauses the panel and both mail services,
+retains private configuration/control/lookup backups, durably adds the alias map
+and verifies TLS readiness. Mailbox storage and queued messages are preserved.
+It makes no DNS, firewall or credential changes. Repeating the helper on a healthy
+upgraded profile is a check-only no-op. An interrupted upgrade leaves mail stopped
+and a maintenance marker. Root must inspect the private backup, command log,
+profile marker and managed map before recovering; do not reinstall or format mail
+storage. Fresh mail installations include the alias map.
+
+## Receive-only mail aliases
+
+Under **Email accounts → Mail aliases**, select a destination mailbox and enter
+another address before `@`. The alias shares that mailbox's domain, inbox and
+quota. It has no password and cannot sign in or send. Only the owning customer,
+its reseller or the server owner can manage it. Mailbox and alias names cannot
+collide, including suspended addresses. Up to 64 aliases per customer and 512 per
+server are retained. Suspension preserves the address and rejects new delivery;
+queued/already delivered messages remain. Destination, domain, account, reseller
+and package suspension also pause aliases. Access changes use the existing
+stop-before-commit checkpoint and owner recovery.
+
+There are no external destinations, alias chains, catch-all addresses, alias
+editing or address removal in this batch. Create another alias and suspend the
+previous one when changing a routing address. Native lookup tables only publish
+active mappings. See the [Postfix virtual alias manual](https://www.postfix.org/virtual.5.html).
 
 ## Owner, reseller and customer workflow
 

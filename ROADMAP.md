@@ -1,8 +1,8 @@
 # VectorCP roadmap
 
 VectorCP aims to become a complete open-source hosting control panel for server
-owners, resellers and customers. The current release is **0.4.2**, an early
-development milestone. [FEATURES.md](FEATURES.md) is the detailed capability map;
+owners, resellers and customers. The current development snapshot is **0.4.4**
+(24 November 2026). The frozen **0.4.2** download remains available. [FEATURES.md](FEATURES.md) is the detailed capability map;
 [VERIFICATION.md](VERIFICATION.md) records what has actually been exercised.
 [PRODUCT.md](PRODUCT.md) defines the self-hosted product contract and
 [CAPABILITIES.md](CAPABILITIES.md) lists the individual workflows.
@@ -44,8 +44,8 @@ profile adds explicit activation and diagnostics; independent delegation,
 multi-nameserver availability and DNSSEC remain open. Managed DNS snapshots and
 interrupted-change recovery are implemented; independent-server recovery remains open.
 The optional Unreleased [mail profile](MAIL_HOSTING.md) provides owner-approved
-local domains, scoped mailboxes, SMTP/IMAPS, quotas and access-publication
-recovery. Aliases, webmail, filtering, signing, mail backup and Internet
+local domains, scoped mailboxes and receive-only aliases, SMTP/IMAPS, quotas and access-publication
+recovery. Webmail, filtering, signing, mail backup and Internet
 deliverability remain open. Package flags alone do not install or activate it.
 
 Complete when external mail delivery and public DNS behavior are independently

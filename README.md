@@ -13,7 +13,7 @@ fee. A user's VPS is one deployment. Do not embed its credentials or customer
 data in the source. Supported installation target: dedicated AlmaLinux 9;
 x86-64 has been exercised. Other platforms and ARM64 remain unverified.
 
-The current development branch (source version **0.4.3**) adds **Unreleased** session management,
+The current development branch (source version **0.4.4**) adds **Unreleased** session management,
 authenticator/recovery codes, password controls, account search/contact editing,
 selected-account changes, recursive file operations, trash, permissions and ZIP
 archives. These additions are not in the immutable 0.4.2 download. See the

@@ -1,3 +1,41 @@
+# Development snapshot 0.4.4 — 24 November 2026
+
+The capability catalog remains **253 workflows: 53 Available, 30 Partial and
+170 Planned**. Receive-only aliases extend the partial mail workflow; broader
+mail and public-delivery acceptance are still open. Prior archives are unchanged.
+
+- **227 Python unit/HTTP checks** pass. The **25 mail/profile checks** also pass
+  on native Python 3.9, including alias ownership, same-domain destinations,
+  collisions and suspended-name reservations, limits, CSRF, inherited access,
+  old-profile digest compatibility and interrupted publication recovery.
+- Five native [alias acceptance groups](tests/acceptance_mail_alias_linux.py)
+  pass on the marked AlmaLinux 9.8 guest with Postfix 3.5.25, Dovecot 2.3.16 and
+  SELinux enforcing. They verify real SMTP/queue/LMTP/inbox delivery, refusal of
+  alias authentication and authenticated alias senders, destination/alias
+  suspension and recovery retaining committed aliases and delivered messages.
+- The owner profile upgrade's check-only pass preserves the control database,
+  configuration, mailbox rows and message contents byte-for-byte. Applying it
+  preserves all existing mailbox credentials and message hashes. Repeating a
+  healthy apply makes no configuration/database changes. Customized Postfix
+  configuration is refused before changing the control database or service PIDs. The eight existing
+  native protocol groups pass again afterward.
+- The website has **32 HTML pages**, a versioned/date-stamped changelog, 24-guide
+  local search and compact mobile documentation navigation. Static checks verify
+  **1,213 local links/anchors**, unique IDs, download checksums and renderer
+  regressions. Browser checks cover 28 views across widths 320, 390, 463, 768,
+  1024, 1280 and 1920 with no page overflow; search and both mobile menus work.
+- Website build/check source and frozen previous public artifacts are included
+  under `website/`. CI builds and verifies the website alongside the panel.
+
+These checks use loopback-only synthetic mail, not external delivery. New alias
+support needs the explicit root profile upgrade on existing mail installations.
+An application update alone does not change native mail configuration, DNS or
+firewall. External forwarding, catch-all handling, webmail, mail backup, filtering,
+signing, independent clients, sustained capacity and independent security review
+remain unverified. See [MAIL_HOSTING.md](MAIL_HOSTING.md).
+
+---
+
 # Unreleased 0.4.3 optional mail hosting
 
 Verified 23 November 2026. The development catalog records **253 workflows:

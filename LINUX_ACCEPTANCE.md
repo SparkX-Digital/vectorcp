@@ -168,3 +168,15 @@ blocked automatic and explicit native startup while pending, preserved real
 messages and committed records, then recovered through the owner API. Native
 SMTP/IMAP acceptance passed again after recovery. This is a virtual-machine
 process crash, not a physical host power-loss test.
+
+
+## Receive-only aliases (0.4.4)
+
+On the same marked, loopback-only mail acceptance guest, upgrade the application,
+run `python3 -m vectorcp.mail_alias_profile` to inspect the check-only result,
+then explicitly repeat with `--apply`. Retain private before/after mailbox row
+and delivered-message hashes. Run `tests/acceptance_mail_alias_linux.py --apply`
+with the reviewed application on `PYTHONPATH`, then rerun the existing native
+mail driver. The alias driver retains synthetic messages and aliases. It does
+not allocate new customer volumes or send external mail. Never run these opt-in
+drivers on a populated customer server.
