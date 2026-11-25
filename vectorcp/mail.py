@@ -134,7 +134,17 @@ class Mail:
         interrupted = self.pending.exists() or self.pending.is_symlink()
         drift = self.current_digest() != self.digest(self.snapshot(db))
         storage = self.e.development or (os.path.ismount(self.store) and os.path.ismount('/var/spool/postfix'))
-        return {'services': services, 'recovery_required': bool(interrupted or drift or not storage or any(v != 'active' for v in services.values()))}
+        message_recovery = False
+        if interrupted:
+            try:
+                info = self.pending.lstat()
+                if stat.S_ISREG(info.st_mode) and info.st_size <= 4096:
+                    checkpoint = json.loads(self.pending.read_text())
+                    message_recovery = isinstance(checkpoint, dict) and checkpoint.get('operation') == 'message-recovery'
+            except (OSError, ValueError):
+                pass
+        return {'services': services, 'message_recovery_required': message_recovery,
+                'recovery_required': bool(interrupted or drift or not storage or any(v != 'active' for v in services.values()))}
 
     def checkpoint(self):
         self.base.mkdir(mode=0o750, parents=True, exist_ok=True)
@@ -281,6 +291,16 @@ class Mail:
         if not self.e.development and Path('/run/vectorcp-profile-maintenance').exists():
             raise Fault('Wait for the server owner to finish service-profile maintenance.', 409)
         if method == 'mail.recover':
+            if self.pending.exists() or self.pending.is_symlink():
+                try:
+                    info = self.pending.lstat()
+                    if not stat.S_ISREG(info.st_mode) or info.st_size > 4096:
+                        raise ValueError()
+                    checkpoint = json.loads(self.pending.read_text())
+                except (OSError, ValueError):
+                    raise Fault('Inspect the unreadable mail checkpoint before recovery.', 409)
+                if isinstance(checkpoint, dict) and checkpoint.get('operation') == 'message-recovery':
+                    raise Fault('Root must use the mail message recovery command to inspect this checkpoint. Publication recovery cannot complete a message restore.', 409)
             if data.get('confirm') != 'RECOVER MAIL':
                 raise Fault('Type RECOVER MAIL after reviewing the service journal.')
             if not self.health(db)['recovery_required']:
