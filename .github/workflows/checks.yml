@@ -45,10 +45,10 @@ jobs:
           bash -n deploy/dns-public.sh
           bash -n deploy/mail-install.sh
           bash -n deploy/public-https.sh
-          python deploy/package.py --output "$RUNNER_TEMP/VectorCP-source.zip"
-          cp "$RUNNER_TEMP/VectorCP-source.zip" "$RUNNER_TEMP/VectorCP-0.4.4-development-source.zip"
-          python website/build.py --panel-source . --development-archive "$RUNNER_TEMP/VectorCP-0.4.4-development-source.zip" --output "$RUNNER_TEMP/website"
+          snapshot_archive="$RUNNER_TEMP/VectorCP-$(python -c 'from vectorcp import __version__; print(__version__)')-development-source.zip"
+          python deploy/package.py --output "$snapshot_archive"
+          python website/build.py --panel-source . --development-archive "$snapshot_archive" --output "$RUNNER_TEMP/website"
           python website/check.py "$RUNNER_TEMP/website"
           node --check "$RUNNER_TEMP/website/assets/site.js"
           cd "$RUNNER_TEMP"
-          sha256sum --check VectorCP-source.zip.sha256
+          sha256sum --check "${snapshot_archive}.sha256"
