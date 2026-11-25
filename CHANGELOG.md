@@ -10,6 +10,36 @@ checksums, versioning and publication rules.
 Future changes will be recorded here after implementation and verification.
 Planned capabilities remain in the roadmap.
 
+## 0.4.5 — 25 November 2026 · Development snapshot
+
+### Added
+
+- Root-only, check-first local message snapshots for the optional managed mail
+  profile. Private manifests verify message content, folder structure, flags,
+  keyword maps and timestamps without exporting passwords or account records.
+- Additive recovery into a fresh folder tree in the same existing mailbox and
+  account. Current inboxes, newer messages, access state and queued mail remain
+  retained; quota, capacity, identity and content checks run before publication.
+- Durable interrupted-message recovery. Ordinary publication recovery cannot
+  clear these checkpoints. Explicit owner recovery withdraws uncommitted new
+  folders into private retained staging, or finalizes a committed operation.
+
+### Changed
+
+- Mail recovery waits for panel readiness after restarting its agent/frontends.
+  The Email accounts page distinguishes message recovery from configuration
+  publication and directs the owner to the appropriate recovery guide.
+- Mail documentation describes the bounded local snapshot workflow and its
+  limits. Website and account-transfer backups continue to exclude mail.
+
+### Development limits
+
+- Local message recovery remains owner-only, limited to the same mailbox on the
+  same managed installation. Scheduling, automatic retention, encryption, offsite
+  mail recovery, clean-host reconstruction and a customer recovery interface are
+  separate work. Native mail stays optional; this update does not activate mail,
+  change existing routing, open ports or alter DNS.
+
 ## 0.4.4 — 24 November 2026 · Development snapshot
 
 ### Added

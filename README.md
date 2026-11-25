@@ -13,7 +13,7 @@ fee. A user's VPS is one deployment. Do not embed its credentials or customer
 data in the source. Supported installation target: dedicated AlmaLinux 9;
 x86-64 has been exercised. Other platforms and ARM64 remain unverified.
 
-The current development branch (source version **0.4.4**) adds **Unreleased** session management,
+The current development branch (source version **0.4.5**) adds **Unreleased** session management,
 authenticator/recovery codes, password controls, account search/contact editing,
 selected-account changes, recursive file operations, trash, permissions and ZIP
 archives. These additions are not in the immutable 0.4.2 download. See the
@@ -30,8 +30,9 @@ stay suspended for review; mail transfer and full-machine recovery remain pendin
 
 The optional development [mail profile](MAIL_HOSTING.md) adds owner-approved
 mail domains, scoped mailboxes, SMTP/IMAPS with TLS, quotas and interruption
-recovery. Webmail, aliases, filtering, signing, mail backup and Internet delivery
-acceptance remain open. Application upgrades do not install or activate mail.
+recovery, receive-only aliases and root-only local message snapshots with additive
+recovery. Webmail, filtering, signing, scheduled/offsite mail backups and Internet
+delivery acceptance remain open. Application upgrades do not install or activate mail.
 
 ## Project
 
@@ -231,7 +232,7 @@ See `VERIFICATION.md` for the exact live evidence and remaining limitations.
 
 ## Remaining product scope
 
-Dynamic inherited plans, nested resellers, webmail/aliases/filtering/signing and mail backup, full public DNS acceptance/DNSSEC, customer shells
+Dynamic inherited plans, nested resellers, webmail/filtering/signing and scheduled/offsite mail backups, full public DNS acceptance/DNSSEC, customer shells
 and FTP, encrypted incremental backups, additional remote transports, arbitrary application runtimes,
 cron/Git, migration, WAF/scanning, billing, update/rollback management and AI/MCP
 integrations remain further work. Independent security review, sustained load,

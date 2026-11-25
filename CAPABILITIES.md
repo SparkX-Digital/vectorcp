@@ -1,6 +1,6 @@
 # VectorCP capability catalog
 
-Updated 24 November 2026. This catalog defines the intended scope for a free,
+Updated 25 November 2026. This catalog defines the intended scope for a free,
 self-hosted hosting panel. It consolidates customer tools, reseller operations
 and server administration into original product requirements. It is not a
 claim that every tool is implemented.
@@ -32,8 +32,9 @@ creation-journal recovery. Other archive formats, remote transports, mail transf
 full-machine recovery remain open.
 
 The optional [mail profile](MAIL_HOSTING.md) implements owner-approved local
-domains, scoped mailboxes, SMTP/IMAPS, quotas and access-publication recovery.
-Aliases, webmail, broader routing, filtering, signing and mail backup remain open;
+domains, scoped mailboxes/aliases, SMTP/IMAPS, quotas, access-publication recovery
+and root-only local message snapshots with additive restore. Webmail, broader
+routing, filtering, signing and scheduled/offsite mail recovery remain open;
 loopback native acceptance does not establish Internet delivery.
 
 Stable IDs identify work items and acceptance evidence. A row is a user workflow,
@@ -339,7 +340,7 @@ preference, suspension precedence, failure recovery and acceptance scope.
 | VCP-1311 | SFTP, FTPS, S3 and optional drive destinations | Partial |
 | VCP-1312 | Encrypted incremental repositories | Planned |
 | VCP-1313 | Compression formats and integrity checks | Partial |
-| VCP-1314 | Restore selected folder, database or mailbox | Planned |
+| VCP-1314 | Restore selected folder, database or mailbox | Partial |
 | VCP-1315 | Restore DNS, certificates, cron and app configuration | Partial |
 | VCP-1316 | Whole-account export/import and disaster recovery | Partial |
 

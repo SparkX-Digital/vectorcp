@@ -11,16 +11,16 @@ From the repository root, create the source archive outside the checkout, then
 build into a separate empty output directory:
 
 ```sh
-python3 deploy/package.py --output /tmp/VectorCP-0.4.4-development-source.zip
+python3 deploy/package.py --output /tmp/VectorCP-0.4.5-development-source.zip
 python3 website/build.py --panel-source . \
-  --development-archive /tmp/VectorCP-0.4.4-development-source.zip \
+  --development-archive /tmp/VectorCP-0.4.5-development-source.zip \
   --output /tmp/vectorcp-website
 python3 website/check.py /tmp/vectorcp-website
 node --check /tmp/vectorcp-website/assets/site.js
 ```
 
 The build copies the previously frozen public 0.4.2 and dated 0.4.3 mail
-snapshot from `source-material`, with their original checksums. The panel image
+snapshot and 0.4.4 source from `source-material`, with their original checksums. The panel image
 is a captured development interface. New downloads must have unique names;
 never replace an existing public archive with different bytes.
 
@@ -29,7 +29,10 @@ never replace an existing public archive with different bytes.
 Retain a private recovery archive first. Stage ZIPs outside the public document
 root and deploy only built public files. Preserve the host's `.htaccess`,
 `.user.ini`, `php.ini` and `.well-known`. `website-directives.htaccess` is a
-reference for owner review, not a file to deploy automatically.
+reference for owner review, not a file to deploy automatically. Use fresh publication
+timestamps for changing deployed files; deterministic source-archive timestamps
+must not be used as live HTML validators. Keep HTML and search JSON revalidation
+separate from long-lived content-versioned asset caching.
 
 Verify local links, all deployed file hashes, phone/tablet/desktop layouts,
 search, mobile navigation, release expansion, keyboard use and download

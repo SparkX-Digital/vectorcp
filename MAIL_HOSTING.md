@@ -5,8 +5,8 @@ distribution's Postfix 3.5 and Dovecot 2.3 packages. This is a limited developme
 profile: mailbox creation, password changes, quotas, suspension, local-domain
 delivery, authenticated SMTP submission and IMAPS are implemented. Same-domain
 receive-only aliases are also implemented. External forwarding, webmail, spam/virus
-filtering, signing, mail backup and broader
-routing remain planned. Internet delivery and reputation are not accepted.
+filtering, signing, scheduled/offsite mail backups and broader routing remain planned.
+Root-only local message snapshots and additive recovery are implemented below. Internet delivery and reputation are not accepted.
 
 The profile is optional. An application upgrade adds the controls without
 installing mail packages, opening ports or changing DNS. Existing external mail
@@ -140,6 +140,93 @@ and credentials but rejects delivery. There is no purge/termination operation in
 this batch. Mail messages and metadata are excluded from website backups and
 portable account transfers; those exports do not protect mail.
 
+## Local message snapshots and additive recovery
+
+Source version **0.4.5** adds an owner-only command for the managed mail profile.
+The default is check-only. Run from the reviewed application tree as root:
+
+```sh
+cd /opt/vectorcp
+sudo python3 -m vectorcp.mail_recovery backup --mailbox user@example.net
+# After reviewing the check-only result:
+sudo python3 -m vectorcp.mail_recovery backup --mailbox user@example.net --apply
+sudo python3 -m vectorcp.mail_recovery list
+```
+
+The applied backup briefly pauses panel access, the agent, Postfix and Dovecot.
+Existing IMAP/SMTP sessions disconnect. Website and database services continue.
+It rechecks idle jobs and the unchanged managed mail configuration before copying
+committed messages. The read-only checks do not construct the application engine
+or mark hosting jobs as interrupted. Current mailbox credentials, access state,
+aliases, lookup records, queued mail, DNS and firewall rules stay unchanged.
+
+Snapshots live in root-only `/var/lib/vectorcp/mail-snapshots/<id>/` directories.
+Each contains a bounded manifest and numbered message files with SHA-256 checks.
+They retain delivered INBOX/subfolder messages, Maildir flags, keyword maps and
+message timestamps. Temporary deliveries, indexes, UID mappings, subscriptions,
+credentials, service configuration, queue contents and account records are not
+included. Snapshots contain private message content: retain them only in private
+storage. They are not encrypted. Customer website UIDs cannot read them.
+
+Use the identifier returned by backup to inspect and apply a restore:
+
+```sh
+sudo python3 -m vectorcp.mail_recovery restore \
+  --snapshot SNAPSHOT_ID --mailbox user@example.net
+# After reviewing the exact destination address and resource checks:
+sudo python3 -m vectorcp.mail_recovery restore \
+  --snapshot SNAPSHOT_ID --mailbox user@example.net --apply
+```
+
+Restore requires the **same existing mailbox, website and account identity**.
+It verifies every message before changing services, repeats quota and identity
+checks while mail is stopped, then creates `Recovered-<snapshot-id>` and its
+subfolders. Existing INBOX, folders, passwords, aliases and newer messages remain
+in place. Dovecot gives the new folders their own UID state; old UID lists and
+indexes are never copied onto a live mailbox. The original folder hierarchy is
+retained under the recovery root; flags, keyword labels and message dates remain.
+The folders are not automatically subscribed: use the client's folder list or
+subscription settings to show them. No deduplication is performed. A repeated
+restore of the same snapshot refuses to overwrite an existing recovery tree.
+
+This bounded profile allows up to **10,000 messages, 256 folders and 256 MB** of
+message bytes in a snapshot and in the combined restored mailbox. Current plus
+recovered virtual message bytes must fit the mailbox's existing quota; an owner
+can increase its reservation through the normal quota workflow first. Local
+storage is limited to **64 snapshot/partial directories and 2 GB** of content.
+Backup requires 256 MB of extra free host storage; restore retains at least 16 MB
+on the mail volume. Symbolic links/special message files, damaged snapshots, unsupported
+keyword maps, unsafe paths, customized native configuration, busy hosting jobs,
+missing mounts and conflicting maintenance are refused. Snapshots are verified
+local directories, not an upload/import format.
+
+An interrupted operation leaves a durable mail startup checkpoint. **Recover
+mail services** in the panel cannot clear a message-restore checkpoint. Inspect
+root's message recovery status and then use its explicit recovery action:
+
+```sh
+sudo python3 -m vectorcp.mail_recovery recover
+sudo python3 -m vectorcp.mail_recovery recover --apply
+```
+
+Before commit, recovery withdraws only this attempt's newly published recovery
+folders into root-only retained staging on the mail volume; current mail stays
+in place. Partial snapshots and staged messages are kept for inspection, not
+purged. Unexpectedly changed or missing recovery data needs manual inspection and
+stays stopped. After commit, recovery finalizes service startup without undoing
+restored mail. Runtime maintenance markers can be recreated after reboot from
+the durable checkpoint. Never remove the checkpoint to bypass these checks.
+Retained staging consumes mail-volume capacity; inspect it and preserve needed
+copies as root before reclaiming it. There is no automatic removal workflow.
+
+This is **local message recovery**, separate from website backup/restore and
+portable account transfers. Scheduling, automatic retention, encrypted/offsite
+mail backups, cross-server import, clean-host reconstruction of accounts/aliases,
+queue recovery and a customer/reseller recovery interface remain open. Local
+snapshots on the same server do not protect against server loss. Consult the
+[Dovecot Maildir format](https://doc.dovecot.org/2.3/admin_manual/mailbox_formats/maildir/)
+for folder and message metadata behavior.
+
 ## Publication and recovery
 
 Mailbox and effective access changes briefly stop **both** native mail services
@@ -184,7 +271,7 @@ These tests use loopback routing and a private test certificate. No Internet
 messages are sent. They do not establish WAN SMTP delivery, independent-client
 compatibility, PTR/reputation, signing/filtering, high-volume capacity, clean-host
 mail restoration or an independent security audit. Public rollout needs those
-acceptance checks and mail-specific backups. This is not complete mail parity.
+acceptance checks and independently verified offsite mail recovery. This is not complete mail parity.
 
 Implementation references: [Dovecot 2.3 SQL authentication](https://doc.dovecot.org/2.3/configuration_manual/authentication/sql/),
 [Dovecot quota](https://doc.dovecot.org/2.3/configuration_manual/quota_plugin/),
@@ -197,3 +284,11 @@ message inventory. After deliberate QEMU process termination and restart, four
 checks verify retained gates/checkpoint/data and explicit owner recovery. The
 eight protocol groups pass again afterward. This is not a physical host
 power-cut test.
+
+The opt-in [message recovery harness](tests/acceptance_mail_recovery_linux.py)
+uses the existing marked loopback-only guest. Four groups verify no-write
+preflight, quiesced private snapshots and website UID denial, real IMAPS additive
+recovery with keyword/flag/date and newer-message preservation, and injected
+mid-publication startup fencing followed by explicit owner withdrawal. All native
+mail records and existing recovered messages are retained with SELinux enforcing.
+It does not establish disaster recovery from a missing host or storage volume.

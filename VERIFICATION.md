@@ -1,3 +1,52 @@
+# Development snapshot 0.4.5 — 25 November 2026
+
+The capability catalog records **253 workflows: 53 Available, 31 Partial and
+169 Planned**. Selected mailbox recovery is now partial: an owner-only command
+protects local messages on the same managed installation. The wider recovery
+workflow, independent offsite recovery and clean-host reconstruction remain open.
+Previous public source archives remain unchanged.
+
+- **244 Python unit/HTTP checks** pass. The **17 new message recovery checks**
+  also pass on native Python 3.9. They cover no-write preflight, message/folder
+  checksums and metadata, ownership binding, corruption/path/link/resource/quota
+  refusals, duplicate restore, reboot-lost runtime markers, interrupted staging
+  and partial publication, changed recovery data, and committed-start failures.
+- Four [native message recovery groups](tests/acceptance_mail_recovery_linux.py)
+  pass on the marked AlmaLinux 9.8 guest with Postfix 3.5.25, Dovecot 2.3.16 and
+  SELinux enforcing. Real IMAPS reads restored messages, flags, keyword labels
+  and internal dates in a new folder tree. Current/newer inbox mail and all
+  existing mail-domain/mailbox/alias records remain unchanged. A website UID
+  cannot read the private snapshots. Injected mid-publication failure blocks
+  native restart and ordinary publication recovery; explicit owner recovery
+  withdraws unfinished new folders into private retained staging.
+- Check-only native backup retains control-database bytes and mail/agent service
+  PIDs. Applied backup/restore pause the panel and mail services, require healthy
+  unchanged managed configuration and idle jobs, verify snapshots, repeat current
+  identity/quota checks, and wait for panel readiness before returning success.
+- The existing eight native mail protocol groups and five native alias groups
+  pass again after the recovery changes, retaining messages and effective access.
+- Browser checks cover the normal and interrupted mail views at 320, 390, 768
+  and 1280 px. Both fit without page overflow; the interrupted message notice
+  hides the generic publication-recovery button and keeps owner guidance visible.
+- Website static checks cover **32 HTML pages, 1,215 local links/anchors**,
+  24 searchable guides, dated 0.4.5 history and immutable previous downloads.
+  Sixteen browser views cover the home, changelog, mail guide and download page
+  at 320, 390, 768 and 1280 px without page overflow. Search for message snapshots
+  ranks the mail hosting guide first.
+
+This is a development snapshot. Mail snapshots are local, root-only, unencrypted,
+limited to 10,000 delivered messages/256 folders/256 MB and bound to the same
+existing mailbox/account. They omit queued/temporary mail, credentials, account
+configuration, subscriptions and UID/index state. Restore adds a fresh recovery
+tree, preserves existing messages and refuses a repeated destination; it does not
+deduplicate. Retained interrupted staging requires root capacity management.
+Scheduled/offsite mail backup, customer recovery controls, cross-server import,
+missing-volume recovery and independent security review remain open. No Internet
+mail was sent; production native mail activation and existing routing are separate.
+See [MAIL_HOSTING.md](MAIL_HOSTING.md).
+
+---
+
 # Development snapshot 0.4.4 — 24 November 2026
 
 The capability catalog remains **253 workflows: 53 Available, 30 Partial and

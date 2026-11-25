@@ -59,6 +59,7 @@ def check(root):
         assert re.fullmatch(r'/docs/(?:[a-z_]+/)?', entry['url'])
         assert (root / entry['url'].lstrip('/') / 'index.html').is_file()
     history = (root / 'changelog/index.html').read_text()
+    assert '0.4.5' in history and '<time datetime="2026-11-25">' in history
     assert '0.4.4' in history and '<time datetime="2026-11-24">' in history
     guide = (root / 'docs/mail_hosting/index.html').read_text()
     assert 'TCP 25, 587 and 993.' in guide
