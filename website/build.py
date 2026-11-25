@@ -395,6 +395,10 @@ Require all denied
 Header always set X-Content-Type-Options "nosniff"
 Header always set Referrer-Policy "strict-origin-when-cross-origin"
 Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'none'"
+<FilesMatch "\.(html|json)$">
+# Preserve copyable documentation examples through delivery intermediaries.
+Header always set Cache-Control "no-cache, max-age=0, must-revalidate, no-transform"
+</FilesMatch>
 </IfModule>
 <IfModule mod_rewrite.c>
 RewriteEngine On
