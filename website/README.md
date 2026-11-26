@@ -34,6 +34,16 @@ timestamps for changing deployed files; deterministic source-archive timestamps
 must not be used as live HTML validators. Keep HTML and search JSON revalidation
 separate from long-lived content-versioned asset caching.
 
+Serve HTML and search JSON with
+`Cache-Control: no-cache, max-age=0, must-revalidate, no-transform`.
+The `no-transform` directive keeps delivery intermediaries from rewriting example
+email addresses in copyable commands or injecting a decoding-script dependency.
+For example, [Cloudflare documents this behavior](https://developers.cloudflare.com/waf/tools/scrape-shield/email-address-obfuscation/).
+Check the actual public response headers and raw example text after deployment;
+origin file checks alone do not verify delivery behavior. Keep the existing
+host-generated settings intact when adding the narrow policy. See the
+[website maintenance history](CHANGELOG.md).
+
 Verify local links, all deployed file hashes, phone/tablet/desktop layouts,
 search, mobile navigation, release expansion, keyboard use and download
 checksums. Keep no-JavaScript documentation links available and test failure

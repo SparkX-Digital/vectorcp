@@ -63,6 +63,9 @@ def check(root):
     assert '0.4.4' in history and '<time datetime="2026-11-24">' in history
     guide = (root / 'docs/mail_hosting/index.html').read_text()
     assert 'TCP 25, 587 and 993.' in guide
+    assert '--mailbox user@example.net' in guide
+    directives = (root / 'website-directives.htaccess').read_text()
+    assert 'Cache-Control "no-cache, max-age=0, must-revalidate, no-transform"' in directives
     for checksum in (root / 'downloads').glob('*.sha256'):
         expected, name = checksum.read_text().strip().split(None, 1)
         assert hashlib.sha256((checksum.parent / name.strip()).read_bytes()).hexdigest() == expected
