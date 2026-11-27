@@ -146,6 +146,8 @@ def template(name, **values):
     return Template((SITE/'templates'/name).read_text()).substitute(**values)
 
 def page(title,description,body,path='/',active=''):
+    # Compact heading layouts may hide BR; keep a real word separator.
+    body=re.sub(r'<h1>.*?</h1>',lambda match:match[0].replace('<br>','<br> '),body,flags=re.S)
     schema={'@context':'https://schema.org','@type':'SoftwareApplication','name':'VectorCP','url':'https://vectorcp.net/','description':'Open-source hosting control panel for server owners, resellers and customers.','applicationCategory':'DeveloperApplication','operatingSystem':'AlmaLinux 9','softwareVersion':VERSION,'license':'https://opensource.org/license/mit','author':{'@type':'Organization','name':'SparkX Digital','url':'https://www.sparkxdigital.co.uk/'}}
     document=template('base.html',title=html.escape(title,quote=True),description=html.escape(description,quote=True),body=body,path=path,github=GITHUB,version=VERSION,schema=json.dumps(schema))
     document=re.sub(r'<a\b[^>]*>.*?</a>',lambda match: re.sub(r'[↗→↓]','',match[0]),document,flags=re.S)
