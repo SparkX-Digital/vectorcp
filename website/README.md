@@ -5,6 +5,19 @@ license. It uses Python's standard library to build self-hosted HTML, CSS,
 JavaScript, documentation search data and version history. It needs no database,
 external fonts, analytics or runtime JavaScript framework.
 
+The shared header/footer and product pages use reviewed HTML templates under
+`templates/`, the common design is `assets/site.css`, and audience copy is in
+`solutions.json`. Keep product claims aligned with the current capability catalog.
+Native disclosure menus and FAQ controls work without JavaScript; task tabs and
+documentation search add progressive enhancement. Keep all task panels available
+in the no-script view.
+
+Product images in `source-material/panel-045-*.jpg` are actual local development
+screenshots with synthetic data. They do not show production customers or establish
+production readiness. The website's self-hosted typefaces retain their original
+licenses under `assets/fonts/`; see that directory's provenance notes. Preserve
+those notices when redistributing the website.
+
 ## Build and verify
 
 From the repository root, create the source archive outside the checkout, then

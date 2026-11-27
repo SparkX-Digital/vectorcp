@@ -1,0 +1,42 @@
+[
+  {
+    "slug": "hosting-providers",
+    "title": "VectorCP for hosting providers",
+    "eyebrow": "For hosting providers",
+    "heading": "Hosting control, from server to customer.",
+    "description": "Manage plans, delegate reseller resources and give each customer a scoped website workspace. Build on source you can inspect and adapt.",
+    "icon": "server",
+    "content": "## Start with a clear account structure\n\nThe server owner creates hosting plans and manages customer and reseller accounts. Resellers work within their assigned resources and permissions. Customers manage the websites and tools available to their own account.\n\nPlans reserve resources explicitly. Account suspension and parent restrictions take precedence over delegated access. Existing volume resizing is not implemented; review the package and storage model before provisioning.\n\n## Run everyday website hosting\n\nCreate static and PHP websites, use customer-specific PHP services and private MariaDB instances, and configure domain HTTPS. The panel also provides bounded file tools, local website backups and scoped activity. Optional mail and public DNS need separate owner setup.\n\n## Evaluate before offering a service\n\nVectorCP is an early development product. Signed updates, broader capacity acceptance, independent security review and complete disaster recovery remain open. Billing integration and complete hosting business automation are not included. Use the capability catalog to assess the precise scope; do not treat the feature list as a production guarantee.",
+    "guides": [["Architecture and account boundaries", "/docs/architecture/"], ["Complete capability catalog", "/docs/capabilities/"], ["Account transfer workflow", "/docs/account_transfers/"]]
+  },
+  {
+    "slug": "agencies",
+    "title": "VectorCP for digital agencies",
+    "eyebrow": "For digital agencies",
+    "heading": "A clearer workspace for your client websites.",
+    "description": "Organize client hosting in separate accounts, manage website files and keep supported recovery copies close to the work.",
+    "icon": "accounts",
+    "content": "## Keep each client in their own account\n\nUse customer accounts to separate client websites and access. Where a server owner delegates reseller access, an agency can manage its assigned customers within the plans and resources it receives. Customers do not gain access to another account’s files or hosting records.\n\n## Handle day-to-day website work\n\nManage static and PHP sites, install WordPress on a fresh website and work with private databases. The file manager supports bounded uploads, editing, search, copy and safe archive extraction, with version checks when saving text files.\n\n## Plan your recovery workflow\n\nLocal website backups include files and primary private SQL. Schedules can run daily, weekly or monthly in UTC. Mail is excluded from website copies and portable account transfers; local message recovery is a separate owner-only workflow.\n\n## Know the current boundaries\n\nThis is a development preview. Automatic WordPress updates, staging and cloning workflows, team seats and a full agency billing system are not implemented. Evaluate supported tasks on a dedicated test server and arrange independently verified recovery before relying on a hosting service.",
+    "guides": [["File manager guide", "/docs/file_manager/"], ["Website backup schedules", "/docs/backup_scheduling/"], ["Database administration", "/docs/database_admin/"]]
+  },
+  {
+    "slug": "developers",
+    "title": "VectorCP for developers and IT",
+    "eyebrow": "For developers & IT",
+    "heading": "Understand the stack behind your websites.",
+    "description": "Work with static sites, PHP, private databases and source code you can read. Run the panel on infrastructure you operate.",
+    "icon": "code",
+    "content": "## Use a familiar hosting stack\n\nThe exercised platform is AlmaLinux 9 x86-64, with Nginx websites, customer-specific PHP-FPM services and private MariaDB instances for database-using customers. Domain HTTPS uses HTTP-01 validation with preflight checks and renewal.\n\n## Manage the website, then inspect the details\n\nUse bounded file operations, private database administration, SQL import and export, DNS record editing and scoped job activity. The documentation describes size bounds, permissions and what each action changes.\n\n## Build on the source\n\nVectorCP is released under the MIT license. The repository includes application code, service templates, installers, tests and technical guidance. Propose focused improvements through the contribution process and report vulnerabilities privately.\n\n## Check unsupported workflows first\n\nA browser shell, FTP service, customer cron and Git deployment are still planned. Other operating systems, general application runtimes and complete machine recovery are not accepted platforms in this development snapshot. Do not assume an integration is present because the underlying server can run it.",
+    "guides": [["Installation requirements", "/docs/"], ["System architecture", "/docs/architecture/"], ["Contributing to VectorCP", "/docs/contributing/"]]
+  },
+  {
+    "slug": "site-owners",
+    "title": "VectorCP for website owners",
+    "eyebrow": "For website owners",
+    "heading": "Your websites. A workspace of their own.",
+    "description": "Find your website files, database tools and local recovery copies together, within the access provided by your hosting account.",
+    "icon": "web",
+    "content": "## Focus on your own websites\n\nA customer account sees its own websites and the tools included in its hosting plan. Server-wide settings and other customers’ hosting records stay outside that account’s scope. The server owner or your assigned reseller manages the resources available to you.\n\n## Work with files and applications\n\nUpload supported files, edit text, search the website and manage folders from the file manager. Use available PHP, WordPress installation and private database tools where your plan permits them. Transfers and text editing have documented size limits.\n\n## Keep track of recovery copies\n\nCreate and inspect supported local website backups and follow their job status. Website copies protect supported files and primary SQL; they do not include mail. Ask the server owner about any separate mail or off-server protection.\n\n## Start with the right setup\n\nVectorCP is server software, not a hosted account service. If you manage your own server, review the installation guide and development limits. If someone provides your hosting, use the panel address and account they give you. The public VectorCP website does not create hosting accounts.",
+    "guides": [["File manager guide", "/docs/file_manager/"], ["Account security controls", "/docs/account_security/"], ["Current feature status", "/features/"]]
+  }
+]
