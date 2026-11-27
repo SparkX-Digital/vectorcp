@@ -13,11 +13,15 @@ from urllib.parse import unquote, urlsplit
 class Page(HTMLParser):
     def __init__(self):
         super().__init__()
-        self.ids, self.links, self.canonicals = set(), [], []
+        self.ids, self.links, self.canonicals, self.controls = set(), [], [], []
         self.headings = 0
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
+        if tag == 'img':
+            assert 'alt' in attrs, 'Images need text alternatives'
+        if 'aria-controls' in attrs:
+            self.controls.extend(attrs['aria-controls'].split())
         if 'id' in attrs:
             assert attrs['id'] not in self.ids, 'Duplicate ID: ' + attrs['id']
             self.ids.add(attrs['id'])
@@ -41,6 +45,8 @@ def check(root):
         pages[path.resolve()] = parser
     links = 0
     for path, page in pages.items():
+        for controlled in page.controls:
+            assert controlled in page.ids, ('Missing controlled region', path, controlled)
         for link in page.links:
             url = urlsplit(link)
             if url.scheme or url.netloc:
@@ -53,6 +59,14 @@ def check(root):
             if url.fragment and target in pages:
                 assert unquote(url.fragment) in pages[target].ids, (path, link)
             links += 1
+    # CSS dependencies are not HTML links, but are still required for a usable site.
+    for stylesheet in (root / 'assets').rglob('*.css'):
+        for value in re.findall(r'url\([\'"]?([^\)\'"\s]+)[\'"]?\)', stylesheet.read_text()):
+            url = urlsplit(value)
+            if url.scheme or url.netloc:
+                continue
+            asset = (root / url.path.lstrip('/') if url.path.startswith('/') else stylesheet.parent / url.path).resolve()
+            assert root in asset.parents and asset.is_file(), ('Missing style asset', stylesheet, value)
     entries = json.loads((root / 'assets/docs-index.json').read_text())
     assert len(entries) >= 20
     for entry in entries:

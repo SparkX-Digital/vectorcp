@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${title} · VectorCP</title>
+  <meta name="description" content="${description}">
+  <link rel="canonical" href="https://vectorcp.net${path}">
+  <link rel="icon" href="/assets/mark.svg" type="image/svg+xml">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="${title} · VectorCP">
+  <meta property="og:description" content="${description}">
+  <meta property="og:url" content="https://vectorcp.net${path}">
+  <meta property="og:image" content="https://vectorcp.net/assets/panel-045-tools.jpg">
+  <meta name="theme-color" content="#174f3f">
+  <link rel="stylesheet" href="/assets/site.css">
+  <script defer src="/assets/site.js"></script>
+  <script type="application/ld+json">${schema}</script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <div class="announcement"><div class="wrap"><span>VectorCP ${version} <span class="announcement-divider">/</span> Development preview</span><a href="/changelog/">See what’s new</a></div></div>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/" aria-label="VectorCP home"><img src="/assets/wordmark.svg" width="158" height="34" alt="VectorCP"></a>
+      <button class="menu-toggle" aria-expanded="false" aria-controls="navigation" aria-label="Open navigation" hidden><span>Menu</span><span class="menu-icon" aria-hidden="true"></span></button>
+      <nav id="navigation" aria-label="Main navigation">
+        <details class="nav-group"><summary>Product<span class="chevron" aria-hidden="true"></span></summary>
+          <div class="mega-menu">
+            <div class="menu-intro"><span class="eyebrow">VectorCP</span><h2>Your hosting, together.</h2><p>Manage websites and the accounts behind them from one self-hosted panel.</p><a class="inline-link" href="/features/">Explore the product</a></div>
+            <div class="menu-column"><span class="menu-label">Hosting tools</span><a href="/features/#hosting"><strong>Websites &amp; applications</strong><span>Domains, PHP, databases and WordPress</span></a><a href="/features/#accounts"><strong>Accounts &amp; resellers</strong><span>Delegation, packages and permissions</span></a><a href="/features/#recovery"><strong>Backups &amp; files</strong><span>Local recovery and website file tools</span></a></div>
+            <div class="menu-column"><span class="menu-label">Know the details</span><a href="/docs/mail_hosting/"><strong>Mail hosting</strong><span>Optional managed mail and its limits</span></a><a href="/docs/public_dns/"><strong>DNS management</strong><span>Zone controls and public DNS profiles</span></a><a href="/features/"><strong>Feature status</strong><span>Available, partial and planned work</span></a></div>
+          </div>
+        </details>
+        <details class="nav-group"><summary>Solutions<span class="chevron" aria-hidden="true"></span></summary>
+          <div class="mega-menu">
+            <div class="menu-intro"><span class="eyebrow">Built around your work</span><h2>One panel.<br>Different perspectives.</h2><p>Choose a workflow for the way you manage websites.</p><a class="inline-link" href="/solutions/">Find your workflow</a></div>
+            <div class="menu-column"><span class="menu-label">For teams</span><a href="/solutions/hosting-providers/"><strong>Hosting providers</strong><span>Manage owners, resellers and customers</span></a><a href="/solutions/agencies/"><strong>Digital agencies</strong><span>Keep client websites in their own accounts</span></a></div>
+            <div class="menu-column"><span class="menu-label">For your websites</span><a href="/solutions/developers/"><strong>Developers &amp; IT</strong><span>Run PHP, static sites and private databases</span></a><a href="/solutions/site-owners/"><strong>Website owners</strong><span>Work with your sites, files and backups</span></a></div>
+          </div>
+        </details>
+        <a class="nav-link" href="/open-source/">Open source</a>
+        <details class="nav-group"><summary>Resources<span class="chevron" aria-hidden="true"></span></summary>
+          <div class="mega-menu">
+            <div class="menu-intro"><span class="eyebrow">Start with a guide</span><h2>Get to know<br>your panel.</h2><p>Installation guidance, technical details and a public development history.</p><a class="inline-link" href="/docs/">Browse documentation</a></div>
+            <div class="menu-column"><span class="menu-label">Learn &amp; deploy</span><a href="/docs/"><strong>Getting started</strong><span>Requirements and installation guidance</span></a><a href="/docs/verification/"><strong>Verification notes</strong><span>What has been tested and what has not</span></a><a href="/security/"><strong>Security</strong><span>Boundaries and private vulnerability reporting</span></a></div>
+            <div class="menu-column"><span class="menu-label">Follow the project</span><a href="/changelog/"><strong>Changelog</strong><span>Versions, dates and completed updates</span></a><a href="/roadmap/"><strong>Roadmap</strong><span>Priorities and work still ahead</span></a><a href="/docs/contributing/"><strong>Contribute</strong><span>Help build VectorCP in the open</span></a></div>
+          </div>
+        </details>
+        <a class="nav-link source-link" href="${github}">GitHub</a>
+        <a class="button small" href="/download/">Download VectorCP</a>
+      </nav>
+    </div>
+  </header>
+  <main id="main">${body}</main>
+  <footer class="site-footer">
+    <div class="wrap footer-top">
+      <div class="footer-brand"><a class="brand" href="/" aria-label="VectorCP home"><img src="/assets/brand/vectorcp-wordmark-light.svg" width="158" height="34" alt="VectorCP"></a><p>Open-source hosting control.<br>Your hosting. Your control.</p><a class="footer-source" href="${github}">Build with us on GitHub</a></div>
+      <div class="footer-column"><h2>Product</h2><a href="/features/">Features &amp; status</a><a href="/download/">Download</a><a href="/open-source/">Free &amp; open source</a><a href="/changelog/">Changelog</a><a href="/roadmap/">Roadmap</a></div>
+      <div class="footer-column"><h2>Solutions</h2><a href="/solutions/hosting-providers/">Hosting providers</a><a href="/solutions/agencies/">Digital agencies</a><a href="/solutions/developers/">Developers &amp; IT</a><a href="/solutions/site-owners/">Website owners</a></div>
+      <div class="footer-column"><h2>Resources</h2><a href="/docs/">Documentation</a><a href="/docs/mail_hosting/">Mail hosting</a><a href="/docs/backup_scheduling/">Backup scheduling</a><a href="/docs/account_transfers/">Account transfers</a><a href="/security/">Security</a></div>
+      <div class="footer-column"><h2>Project</h2><a href="/about/">About VectorCP</a><a href="/docs/contributing/">Contributing</a><a href="${github}/issues">Issues &amp; ideas</a><a href="/docs/branding/">Brand assets</a><a href="${github}/blob/main/LICENSE">MIT license</a></div>
+    </div>
+    <div class="wrap footer-bottom"><span>© 2026 VectorCP contributors. A <a href="https://www.sparkxdigital.co.uk/">SparkX Digital</a> project.</span><span>Self-hosted software · Development preview</span></div>
+  </footer>
+</body>
+</html>
